@@ -46,7 +46,7 @@ Engine::Engine() : hWnd(NULL), hDC(NULL), hRC(NULL) {
   vScenes.push_back(std::shared_ptr<Scene>(new Level5));
   vScenes.push_back(std::shared_ptr<Scene>(new Level6));
 
-  LoadScene(0);
+  LoadScene(1);
 
   sky.reset(new Sky);
 }
