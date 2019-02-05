@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.12
+VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NonEuclidean", "NonEuclidean\NonEuclidean.vcxproj", "{F65CA4E7-62A0-4D48-A338-E7C156BE3899}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NonEuclideanTesting", "NonEuclideanTesting\NonEuclideanTesting.vcxproj", "{314B764A-5374-4122-BF39-B71D4FE47F0D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,8 +23,19 @@ Global
 		{F65CA4E7-62A0-4D48-A338-E7C156BE3899}.Release|x64.Build.0 = Release|x64
 		{F65CA4E7-62A0-4D48-A338-E7C156BE3899}.Release|x86.ActiveCfg = Release|Win32
 		{F65CA4E7-62A0-4D48-A338-E7C156BE3899}.Release|x86.Build.0 = Release|Win32
+		{314B764A-5374-4122-BF39-B71D4FE47F0D}.Debug|x64.ActiveCfg = Debug|x64
+		{314B764A-5374-4122-BF39-B71D4FE47F0D}.Debug|x64.Build.0 = Debug|x64
+		{314B764A-5374-4122-BF39-B71D4FE47F0D}.Debug|x86.ActiveCfg = Debug|Win32
+		{314B764A-5374-4122-BF39-B71D4FE47F0D}.Debug|x86.Build.0 = Debug|Win32
+		{314B764A-5374-4122-BF39-B71D4FE47F0D}.Release|x64.ActiveCfg = Release|x64
+		{314B764A-5374-4122-BF39-B71D4FE47F0D}.Release|x64.Build.0 = Release|x64
+		{314B764A-5374-4122-BF39-B71D4FE47F0D}.Release|x86.ActiveCfg = Release|Win32
+		{314B764A-5374-4122-BF39-B71D4FE47F0D}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {818C8936-D7B4-426C-863B-45C0C570291F}
 	EndGlobalSection
 EndGlobal
