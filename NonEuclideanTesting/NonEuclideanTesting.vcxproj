@@ -46,7 +46,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -77,6 +77,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <LibraryPath>..\glew-2.1.0\lib\Release\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -89,16 +90,17 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\glew-2.1.0\include;$(VCInstallDir)UnitTest\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;GLEW_STATIC;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UseFullPaths>true</UseFullPaths>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OpenGL32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -152,10 +154,62 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\NonEuclidean\Camera.h" />
+    <ClInclude Include="..\NonEuclidean\Collider.h" />
+    <ClInclude Include="..\NonEuclidean\Engine.h" />
+    <ClInclude Include="..\NonEuclidean\Floorplan.h" />
+    <ClInclude Include="..\NonEuclidean\FrameBuffer.h" />
+    <ClInclude Include="..\NonEuclidean\GameHeader.h" />
+    <ClInclude Include="..\NonEuclidean\Ground.h" />
+    <ClInclude Include="..\NonEuclidean\House.h" />
+    <ClInclude Include="..\NonEuclidean\Input.h" />
+    <ClInclude Include="..\NonEuclidean\Level1.h" />
+    <ClInclude Include="..\NonEuclidean\Level2.h" />
+    <ClInclude Include="..\NonEuclidean\Level3.h" />
+    <ClInclude Include="..\NonEuclidean\Level4.h" />
+    <ClInclude Include="..\NonEuclidean\Level5.h" />
+    <ClInclude Include="..\NonEuclidean\Level6.h" />
+    <ClInclude Include="..\NonEuclidean\Mesh.h" />
+    <ClInclude Include="..\NonEuclidean\Object.h" />
+    <ClInclude Include="..\NonEuclidean\Physical.h" />
+    <ClInclude Include="..\NonEuclidean\Pillar.h" />
+    <ClInclude Include="..\NonEuclidean\PillarRoom.h" />
+    <ClInclude Include="..\NonEuclidean\Player.h" />
+    <ClInclude Include="..\NonEuclidean\Portal.h" />
+    <ClInclude Include="..\NonEuclidean\Resources.h" />
+    <ClInclude Include="..\NonEuclidean\Scene.h" />
+    <ClInclude Include="..\NonEuclidean\Shader.h" />
+    <ClInclude Include="..\NonEuclidean\Sky.h" />
+    <ClInclude Include="..\NonEuclidean\Sphere.h" />
+    <ClInclude Include="..\NonEuclidean\Statue.h" />
+    <ClInclude Include="..\NonEuclidean\Texture.h" />
+    <ClInclude Include="..\NonEuclidean\Timer.h" />
+    <ClInclude Include="..\NonEuclidean\Tunnel.h" />
+    <ClInclude Include="..\NonEuclidean\Vector.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\NonEuclidean\Camera.cpp" />
+    <ClCompile Include="..\NonEuclidean\Collider.cpp" />
+    <ClCompile Include="..\NonEuclidean\Engine.cpp" />
+    <ClCompile Include="..\NonEuclidean\FrameBuffer.cpp" />
+    <ClCompile Include="..\NonEuclidean\Input.cpp" />
+    <ClCompile Include="..\NonEuclidean\Level1.cpp" />
+    <ClCompile Include="..\NonEuclidean\Level2.cpp" />
+    <ClCompile Include="..\NonEuclidean\Level3.cpp" />
+    <ClCompile Include="..\NonEuclidean\Level4.cpp" />
+    <ClCompile Include="..\NonEuclidean\Level5.cpp" />
+    <ClCompile Include="..\NonEuclidean\Level6.cpp" />
+    <ClCompile Include="..\NonEuclidean\Main.cpp" />
+    <ClCompile Include="..\NonEuclidean\Mesh.cpp" />
+    <ClCompile Include="..\NonEuclidean\Object.cpp" />
+    <ClCompile Include="..\NonEuclidean\Physical.cpp" />
+    <ClCompile Include="..\NonEuclidean\Player.cpp" />
+    <ClCompile Include="..\NonEuclidean\Portal.cpp" />
+    <ClCompile Include="..\NonEuclidean\Resources.cpp" />
+    <ClCompile Include="..\NonEuclidean\Shader.cpp" />
+    <ClCompile Include="..\NonEuclidean\Texture.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

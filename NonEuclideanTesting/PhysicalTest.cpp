@@ -1,16 +1,16 @@
 #include "stdafx.h"
 #include "CppUnitTest.h"
-#include "../NonEuclidean/Player.h"
+#include "Player.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace NonEuclideanTesting
 {		
-	TEST_CLASS(Player)
+	TEST_CLASS(asd)
 	{
 	public:
 		
-		TEST_METHOD(TryPortal)
+		TEST_METHOD(asfasg)
 		{
 			Player p;
 		}
