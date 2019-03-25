@@ -15,41 +15,41 @@
 // --- SDL2-specific code ------------------------------------------------
 
 bool Engine::InitOSWrapper() {
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-		SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
-		return false;
-	}
+  if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+    SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
+    return false;
+  }
 
-	atexit(SDL_Quit);	// SDL will be shut down automatically on app exit
-	return true;
+  atexit(SDL_Quit); // SDL will be shut down automatically on app exit
+  return true;
 }
 
 void Engine::SetupInputs() {
-	// not needed
+  // not needed
 }
 
 void Engine::CreateGLWindow() {
-	iWidth = GH_SCREEN_WIDTH;
-	iHeight = GH_SCREEN_HEIGHT;
+  iWidth = GH_SCREEN_WIDTH;
+  iHeight = GH_SCREEN_HEIGHT;
 
-	window = SDL_CreateWindow(
-		GH_TITLE,
-		GH_SCREEN_X, GH_SCREEN_Y,
-		iWidth, iHeight,
-		SDL_WINDOW_OPENGL|SDL_WINDOW_ALLOW_HIGHDPI|
-			(GH_START_FULLSCREEN ? SDL_WINDOW_FULLSCREEN : 0)
+  window = SDL_CreateWindow(
+    GH_TITLE,
+    GH_SCREEN_X, GH_SCREEN_Y,
+    iWidth, iHeight,
+    SDL_WINDOW_OPENGL|SDL_WINDOW_ALLOW_HIGHDPI|
+      (GH_START_FULLSCREEN ? SDL_WINDOW_FULLSCREEN : 0)
   );
   if (!window) {
-  	SDL_Log("Unable to create GL window: %s", SDL_GetError());
-  	return;
+    SDL_Log("Unable to create GL window: %s", SDL_GetError());
+    return;
   }
 
   // window successfully created
 
   glContext = SDL_GL_CreateContext(window);
   if (!glContext) {
-  	SDL_Log("Unable to create GL context: %s", SDL_GetError());
-  	return;
+    SDL_Log("Unable to create GL context: %s", SDL_GetError());
+    return;
   }
 
   // GL context is created and is current for the calling thread
@@ -58,20 +58,20 @@ void Engine::CreateGLWindow() {
 }
 
 void Engine::DestroyGLWindow() {
-	if (glContext) {
-		SDL_GL_DeleteContext(glContext);
-	}
-	if (window) {
-		SDL_DestroyWindow(window);
-	}
+  if (glContext) {
+    SDL_GL_DeleteContext(glContext);
+  }
+  if (window) {
+    SDL_DestroyWindow(window);
+  }
 }
 
 void Engine::EnableVSync() {
 
-	// try adaptive vsync first, if not supported, go full vsync
-	if (SDL_GL_SetSwapInterval(-1) != 0) {
-		SDL_GL_SetSwapInterval(1);
-	}
+  // try adaptive vsync first, if not supported, go full vsync
+  if (SDL_GL_SetSwapInterval(-1) != 0) {
+    SDL_GL_SetSwapInterval(1);
+  }
 }
 
 int Engine::EnterMessageLoop() {
@@ -83,14 +83,14 @@ int Engine::EnterMessageLoop() {
 
   SDL_Event event;
   while(true) {
-  	if (SDL_PollEvent(&event)) {
-  		if (event.type == SDL_QUIT) {
-  			break;
-  		}
-  	}
-  	else {
+    if (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT) {
+        break;
+      }
+    }
+    else {
 
-  		input.UpdateRaw();
+      input.UpdateRaw();
 
       //Confine the cursor
       ConfineCursor();
@@ -121,10 +121,10 @@ int Engine::EnterMessageLoop() {
 
 void Engine::ConfineCursor()
 {
-	// TODO
+  // TODO
 }
 
 void Engine::SwapBuffers()
 {
-	SDL_GL_SwapWindow(window);
+  SDL_GL_SwapWindow(window);
 }
