@@ -1,7 +1,9 @@
 #include "Player.h"
 #include "Input.h"
 #include "GameHeader.h"
-#include <Windows.h>
+#if defined(_WIN32)
+  #include <Windows.h>
+#endif
 #include <iostream>
 
 Player::Player() {
