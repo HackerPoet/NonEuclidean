@@ -51,9 +51,6 @@ int LoadMeshes()
     {
         for (int i = 0; i < 14; i++)
         {
-            auto name = std::next(MeshName.begin(), i);
-            std::string path = *name;
-            
             auto Buffer = bunny_obj;
             if (i == 0)
                 Buffer = bunny_obj;
@@ -84,13 +81,14 @@ int LoadMeshes()
             else if (i == 13)
                 Buffer = tunnel_slope_obj;
 
-            auto size = std::next(MeshSize.begin(), i);
+            std::string path = *std::next(MeshName.begin(), i);
+            size_t size = *std::next(MeshSize.begin(), i);
 
             std::fstream fileStream;
             fileStream.open(path);
             if (fileStream.fail())
                 if (fopen_s(&file, path.c_str(), "wb") == 0)
-                    if (fwrite(Buffer, 1, *size, file))
+                    if (fwrite(Buffer, 1, size, file))
                         fclose(file);
                     else
                         return 3;
@@ -113,9 +111,6 @@ int LoadShaders()
     {
         for (int i = 0; i < 10; i++)
         {
-            auto name = std::next(ShadName.begin(), i);
-            std::string path = *name;            
-
             auto Buffer = pink_frag;
             if (i == 0)
                 Buffer = pink_frag;
@@ -138,13 +133,14 @@ int LoadShaders()
             else if (i == 9)
                 Buffer = texture_array_vert;
 
-            auto size = std::next(ShadSize.begin(), i);
+            std::string path = *std::next(ShadName.begin(), i);
+            size_t size = *std::next(ShadSize.begin(), i);
 
             std::fstream fileStream;
             fileStream.open(path);
             if (fileStream.fail())
                 if (fopen_s(&file, path.c_str(), "wb") == 0)
-                    if (fwrite(Buffer, 1, *size, file))
+                    if (fwrite(Buffer, 1, size, file))
                         fclose(file);
                     else
                         return 3;
@@ -167,9 +163,6 @@ int LoadTextures()
     {
         for (int i = 0; i < 7; i++)
         {
-            auto name = std::next(TexturesName.begin(), i);
-            std::string path = *name;
-
             auto Buffer = checker_gray_bmp;
             if (i == 0)
                 Buffer = checker_gray_bmp;
@@ -186,13 +179,14 @@ int LoadTextures()
             else if (i == 6)
                 Buffer = white_bmp;
 
-            auto size = std::next(TexturesSize.begin(), i);
+            std::string path = *std::next(TexturesName.begin(), i);
+            size_t size = *std::next(TexturesSize.begin(), i);
 
             std::fstream fileStream;
             fileStream.open(path);
             if (fileStream.fail())
                 if (fopen_s(&file, path.c_str(), "wb") == 0)
-                    if (fwrite(Buffer, 1, *size, file))
+                    if (fwrite(Buffer, 1, size, file))
                         fclose(file);
                     else
                         return 3;
