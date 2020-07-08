@@ -1,4 +1,3 @@
-//#define _CRT_SECURE_NO_WARNINGS
 #include "Engine.h"
 
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
