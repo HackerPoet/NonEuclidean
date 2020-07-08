@@ -38,9 +38,10 @@ std::shared_ptr<Texture> AquireTexture(const char* name, int rows, int cols) {
 }
 
 #include <windows.h>
-#include "Meshes/Meshes.h"
 #include <fstream>
+#include "Meshes/Meshes.h"
 #include "Shaders/Shaders.h"
+#include "Textures/Textures.h"
 
 int LoadMeshes()
 {
@@ -142,7 +143,7 @@ int LoadMeshes()
 
 int LoadShaders()
 {
-    if (CreateDirectory("Meshes", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+    if (CreateDirectory("Shaders", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
     {
         FILE* file;
 
@@ -198,6 +199,76 @@ int LoadShaders()
                 Buffer = texture_array_frag;
             else if (i == 9)
                 Buffer = texture_array_vert;
+
+            auto size = std::next(charSize.begin(), i);
+
+            std::fstream fileStream;
+            fileStream.open(path);
+            if (fileStream.fail())
+                if (fopen_s(&file, path.c_str(), "wb") == 0)
+                    if (fwrite(Buffer, 1, *size, file))
+                        fclose(file);
+                    else
+                        return 3;
+                else
+                    return 2;
+            else
+                fileStream.close();
+        }
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+int LoadTextures()
+{
+    if (CreateDirectory("Textures", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+    {
+        FILE* file;
+
+        std::list<std::string> FileName = {
+            "./Textures/checker_gray.bmp",
+            "./Textures/checker_green.bmp",
+            "./Textures/floorplan_textures.bmp",
+            "./Textures/gold.bmp",
+            "./Textures/three_room.bmp",
+            "./Textures/three_room2.bmp",
+            "./Textures/white.bmp",
+        };
+
+        std::list<int> charSize = {
+            102,
+            102,
+            786486,
+            58,
+            3126,
+            3126,
+            58,
+        };
+
+        for (int i = 0; i < 7; i++)
+        {
+            auto name = std::next(FileName.begin(), i);
+            std::string path = *name;
+
+            auto Buffer = checker_gray_bmp;
+            if (i == 0)
+                Buffer = checker_gray_bmp;
+            else if (i == 1)
+                Buffer = checker_green_bmp;
+            else if (i == 2)
+                Buffer = floorplan_textures_bmp;
+            else if (i == 3)
+                Buffer = gold_bmp;
+            else if (i == 4)
+                Buffer = three_room_bmp;
+            else if (i == 5)
+                Buffer = three_room2_bmp;
+            else if (i == 6)
+                Buffer = white_bmp;
 
             auto size = std::next(charSize.begin(), i);
 

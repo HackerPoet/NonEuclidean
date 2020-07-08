@@ -191,5 +191,8 @@
     <ClInclude Include="Shaders\Shaders.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
+    <ClInclude Include="Textures\Textures.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -204,6 +204,7 @@
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="Statue.h" />
     <ClInclude Include="Texture.h" />
+    <ClInclude Include="Textures\Textures.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Vector.h" />
     <ClInclude Include="Tunnel.h" />

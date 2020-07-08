@@ -13,11 +13,14 @@ int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpsz
   //Load Meshes files
   if (LoadMeshes() == 0)
 	  if (LoadShaders() == 0)
-	  {
-		  //Run the main engine
-		  Engine engine;
-		  return engine.Run();
-	  }
+		  if (LoadTextures() == 0)
+		  {
+			  //Run the main engine
+			  Engine engine;
+			  return engine.Run();
+		  }
+		  else
+			  return 0;
 	  else
 		  return 0;
   else
