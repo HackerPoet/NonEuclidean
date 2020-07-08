@@ -1,6 +1,6 @@
 #include "Player.h"
-#include "Input.h"
-#include "GameHeader.h"
+#include "../Input.h"
+#include "../GameHeader.h"
 #include <Windows.h>
 #include <iostream>
 

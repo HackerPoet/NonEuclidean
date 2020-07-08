@@ -1,6 +1,6 @@
 #pragma once
-#include "Object.h"
-#include "Resources.h"
+#include "../Object.h"
+#include "../Resources.h"
 
 class Ground : public Object {
 public:

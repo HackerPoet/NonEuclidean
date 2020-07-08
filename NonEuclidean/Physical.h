@@ -1,6 +1,6 @@
 #pragma once
 #include "Object.h"
-#include "Portal.h"
+#include "GameObjects/Portal.h"
 #include "Sphere.h"
 
 class Physical : public Object {

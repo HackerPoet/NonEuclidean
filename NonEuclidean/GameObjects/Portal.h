@@ -1,10 +1,10 @@
 #pragma once
-#include "GameHeader.h"
-#include "Object.h"
-#include "FrameBuffer.h"
-#include "Mesh.h"
-#include "Resources.h"
-#include "Shader.h"
+#include "../GameHeader.h"
+#include "../Object.h"
+#include "../FrameBuffer.h"
+#include "../Mesh.h"
+#include "../Resources.h"
+#include "../Shader.h"
 #include <memory>
 
 class Portal : public Object {

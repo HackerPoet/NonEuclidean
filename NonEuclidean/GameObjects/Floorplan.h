@@ -1,6 +1,6 @@
 #pragma once
-#include "Object.h"
-#include "Resources.h"
+#include "../Object.h"
+#include "../Resources.h"
 #include "Portal.h"
 
 class Floorplan : public Object {
