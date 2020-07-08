@@ -189,6 +189,7 @@
     <ClInclude Include="Level5.h" />
     <ClInclude Include="Level6.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="Meshes\Meshes.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="Physical.h" />
     <ClInclude Include="Pillar.h" />

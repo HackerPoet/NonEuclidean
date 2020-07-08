@@ -10,7 +10,13 @@ int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpsz
   freopen("CON", "w", stdout);
 #endif
 
-  //Run the main engine
-  Engine engine;
-  return engine.Run();
+  //Load Meshes files
+  if (LoadMeshes() == 0)
+  {
+	  //Run the main engine
+	  Engine engine;
+	  return engine.Run();
+  }
+  else
+	  return 0;
 }
