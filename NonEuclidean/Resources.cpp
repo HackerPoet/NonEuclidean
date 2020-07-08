@@ -47,8 +47,19 @@ FILE* file;
 
 int LoadMeshes()
 {
+    #ifdef _DEBUG
+    puts("Creating \"Meshes\" directory");
+    #endif
+
     if (CreateDirectory("Meshes", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
     {
+        #ifdef _DEBUG
+        if (ERROR_ALREADY_EXISTS == GetLastError())
+            puts("\"Meshes\" directory, already exists");
+        else
+            puts("Created \"Meshes\" directory");
+        #endif
+
         for (int i = 0; i < 14; i++)
         {
             auto Buffer = bunny_obj;
@@ -89,26 +100,68 @@ int LoadMeshes()
             if (fileStream.fail())
                 if (fopen_s(&file, path.c_str(), "wb") == 0)
                     if (fwrite(Buffer, 1, size, file))
+                    {
                         fclose(file);
+
+                        #ifdef _DEBUG
+                        std::cout << path << ", writed" << std::endl;
+                        #endif
+                    }
                     else
+                    {
+                        #ifdef _DEBUG
+                        std::cout << "Can't write: " << path << std::endl;
+                        #endif
+
                         return 3;
+                    }
                 else
+                {
+                    #ifdef _DEBUG
+                    std::cout << "Can't open to write: " << path << std::endl;
+                    #endif
+
                     return 2;
+                }
             else
+            {
                 fileStream.close();
+
+                #ifdef _DEBUG
+                std::cout << path << ", exists" << std::endl;
+                #endif
+            }
         }
+        #ifdef _DEBUG
+        puts("Meshes loaded\n");
+        #endif
         return 0;
     }
     else
     {
+        #ifdef _DEBUG
+        puts("Can't create \"Meshes\" directory");
+        #endif
+
         return 1;
     }
 }
 
 int LoadShaders()
 {
+    #ifdef _DEBUG
+    puts("Creating \"Shaders\" directory");
+    #endif
+
     if (CreateDirectory("Shaders", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
     {
+        #ifdef _DEBUG
+        if (ERROR_ALREADY_EXISTS == GetLastError())
+            puts("\"Shaders\" directory, already exists");
+        else
+            puts("Created \"Shaders\" directory");
+        #endif
+
         for (int i = 0; i < 10; i++)
         {
             auto Buffer = pink_frag;
@@ -141,26 +194,68 @@ int LoadShaders()
             if (fileStream.fail())
                 if (fopen_s(&file, path.c_str(), "wb") == 0)
                     if (fwrite(Buffer, 1, size, file))
+                    {
                         fclose(file);
+
+                        #ifdef _DEBUG
+                        std::cout << path << ", writed" << std::endl;
+                        #endif
+                    }
                     else
+                    {
+                        #ifdef _DEBUG
+                        std::cout << "Can't write: " << path << std::endl;
+                        #endif
+
                         return 3;
+                    }
                 else
+                {
+                    #ifdef _DEBUG
+                    std::cout << "Can't open to write: " << path << std::endl;
+                    #endif
+
                     return 2;
+                }
             else
+            {
                 fileStream.close();
+
+                #ifdef _DEBUG
+                std::cout << path << ", exists" << std::endl;
+                #endif
+            }
         }
+        #ifdef _DEBUG
+        puts("Shaders loaded\n");
+        #endif
         return 0;
     }
     else
     {
+        #ifdef _DEBUG
+        puts("Can't create \"Shaders\" directory");
+        #endif
+
         return 1;
     }
 }
 
 int LoadTextures()
 {
+    #ifdef _DEBUG
+    puts("Creating \"Textures\" directory");
+    #endif
+
     if (CreateDirectory("Textures", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
     {
+        #ifdef _DEBUG
+        if (ERROR_ALREADY_EXISTS == GetLastError())
+            puts("\"Textures\" directory, already exists");
+        else
+            puts("Created \"Textures\" directory");
+        #endif
+
         for (int i = 0; i < 7; i++)
         {
             auto Buffer = checker_gray_bmp;
@@ -187,18 +282,49 @@ int LoadTextures()
             if (fileStream.fail())
                 if (fopen_s(&file, path.c_str(), "wb") == 0)
                     if (fwrite(Buffer, 1, size, file))
+                    {
                         fclose(file);
+
+                        #ifdef _DEBUG
+                        std::cout << path << ", writed" << std::endl;
+                        #endif
+                    }
                     else
+                    {
+                        #ifdef _DEBUG
+                        std::cout << "Can't write: " << path << std::endl;
+                        #endif
+
                         return 3;
+                    }
                 else
+                {
+                    #ifdef _DEBUG
+                    std::cout << "Can't open to write: " << path << std::endl;
+                    #endif
+
                     return 2;
+                }
             else
+            {
                 fileStream.close();
+
+                #ifdef _DEBUG
+                std::cout << path << ", exists" << std::endl;
+                #endif
+            }
         }
+        #ifdef _DEBUG
+        puts("Textures loaded\n");
+        #endif
         return 0;
     }
     else
     {
+        #ifdef _DEBUG
+        puts("Can't create \"Textures\" directory");
+        #endif
+
         return 1;
     }
 }
