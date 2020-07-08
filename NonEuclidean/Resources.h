@@ -9,3 +9,4 @@ std::shared_ptr<Shader> AquireShader(const char* name);
 std::shared_ptr<Texture> AquireTexture(const char* name, int rows=1, int cols=1);
 
 int LoadMeshes();
+int LoadShaders();

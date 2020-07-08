@@ -199,6 +199,7 @@
     <ClInclude Include="Resources.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="Shaders\Shaders.h" />
     <ClInclude Include="Sky.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="Statue.h" />

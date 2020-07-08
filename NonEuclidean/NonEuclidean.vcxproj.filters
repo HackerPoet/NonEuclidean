@@ -188,5 +188,8 @@
     <ClInclude Include="Meshes\Meshes.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
+    <ClInclude Include="Shaders\Shaders.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

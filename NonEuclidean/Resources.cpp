@@ -40,6 +40,7 @@ std::shared_ptr<Texture> AquireTexture(const char* name, int rows, int cols) {
 #include <windows.h>
 #include "Meshes/Meshes.h"
 #include <fstream>
+#include "Shaders/Shaders.h"
 
 int LoadMeshes()
 {
@@ -48,20 +49,20 @@ int LoadMeshes()
         FILE* file;
 
         std::list<std::string> FileName = {
-            "bunny",
-            "double_quad",
-            "floorplan",
-            "ground",
-            "ground_slope",
-            "pillar",
-            "pillar_room",
-            "quad",
-            "square_rooms",
-            "suzanne",
-            "teapot",
-            "tunnel",
-            "tunnel_scale",
-            "tunnel_slope",
+            "./Meshes/bunny.obj",
+            "./Meshes/double_quad.obj",
+            "./Meshes/floorplan.obj",
+            "./Meshes/ground.obj",
+            "./Meshes/ground_slope.obj",
+            "./Meshes/pillar.obj",
+            "./Meshes/pillar_room.obj",
+            "./Meshes/quad.obj",
+            "./Meshes/square_rooms.obj",
+            "./Meshes/suzanne.obj",
+            "./Meshes/teapot.obj",
+            "./Meshes/tunnel.obj",
+            "./Meshes/tunnel_scale.obj",
+            "./Meshes/tunnel_slope.obj",
         };
 
         std::list<int> charSize = {
@@ -84,9 +85,7 @@ int LoadMeshes()
         for (int i = 0; i < 14; i++)
         {
             auto name = std::next(FileName.begin(), i);
-            std::string path = "./Meshes/";
-            path += *name;
-            path += ".obj";
+            std::string path = *name;
             
             auto Buffer = bunny_obj;
             if (i == 0)
@@ -117,6 +116,88 @@ int LoadMeshes()
                 Buffer = tunnel_scale_obj;
             else if (i == 13)
                 Buffer = tunnel_slope_obj;
+
+            auto size = std::next(charSize.begin(), i);
+
+            std::fstream fileStream;
+            fileStream.open(path);
+            if (fileStream.fail())
+                if (fopen_s(&file, path.c_str(), "wb") == 0)
+                    if (fwrite(Buffer, 1, *size, file))
+                        fclose(file);
+                    else
+                        return 3;
+                else
+                    return 2;
+            else
+                fileStream.close();
+        }
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+int LoadShaders()
+{
+    if (CreateDirectory("Meshes", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+    {
+        FILE* file;
+
+        std::list<std::string> FileName = {
+            "./Shaders/pink.frag",
+            "./Shaders/pink.vert",
+            "./Shaders/portal.frag",
+            "./Shaders/portal.vert",
+            "./Shaders/sky.frag",
+            "./Shaders/sky.vert",
+            "./Shaders/texture.frag",
+            "./Shaders/texture.vert",
+            "./Shaders/texture_array.frag",
+            "./Shaders/texture_array.vert",
+        };
+
+        std::list<int> charSize = {
+            178,
+            156,
+            258,
+            209,
+            496,
+            325,
+            313,
+            320,
+            320,
+            320,
+        };
+
+        for (int i = 0; i < 10; i++)
+        {
+            auto name = std::next(FileName.begin(), i);
+            std::string path = *name;            
+
+            auto Buffer = pink_frag;
+            if (i == 0)
+                Buffer = pink_frag;
+            else if (i == 1)
+                Buffer = pink_vert;
+            else if (i == 2)
+                Buffer = portal_frag;
+            else if (i == 3)
+                Buffer = portal_vert;
+            else if (i == 4)
+                Buffer = sky_frag;
+            else if (i == 5)
+                Buffer = sky_vert;
+            else if (i == 6)
+                Buffer = texture_frag;
+            else if (i == 7)
+                Buffer = texture_vert;
+            else if (i == 8)
+                Buffer = texture_array_frag;
+            else if (i == 9)
+                Buffer = texture_array_vert;
 
             auto size = std::next(charSize.begin(), i);
 
