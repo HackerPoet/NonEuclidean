@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
+//#define _CRT_SECURE_NO_WARNINGS
 #include "Engine.h"
 
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
@@ -7,7 +7,9 @@ int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpsz
 	AllocConsole();
 	//SetWindowPos(GetConsoleWindow(), 0, 1920, 200, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 	AttachConsole(GetCurrentProcessId());
-	freopen("CON", "w", stdout);
+	errno_t dbg;
+	FILE* dummyFile;
+	dbg = freopen_s(&dummyFile, "CON", "w", stdout);
 #endif
 
 	//Load Meshes files
