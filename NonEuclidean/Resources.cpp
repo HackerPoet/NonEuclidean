@@ -43,49 +43,15 @@ std::shared_ptr<Texture> AquireTexture(const char* name, int rows, int cols) {
 #include "Shaders/Shaders.h"
 #include "Textures/Textures.h"
 
+FILE* file;
+
 int LoadMeshes()
 {
     if (CreateDirectory("Meshes", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
     {
-        FILE* file;
-
-        std::list<std::string> FileName = {
-            "./Meshes/bunny.obj",
-            "./Meshes/double_quad.obj",
-            "./Meshes/floorplan.obj",
-            "./Meshes/ground.obj",
-            "./Meshes/ground_slope.obj",
-            "./Meshes/pillar.obj",
-            "./Meshes/pillar_room.obj",
-            "./Meshes/quad.obj",
-            "./Meshes/square_rooms.obj",
-            "./Meshes/suzanne.obj",
-            "./Meshes/teapot.obj",
-            "./Meshes/tunnel.obj",
-            "./Meshes/tunnel_scale.obj",
-            "./Meshes/tunnel_slope.obj",
-        };
-
-        std::list<int> charSize = {
-            205917,
-            120,
-            24564,
-            96,
-            287,
-            30910,
-            1913,
-            102,
-            5479,
-            81336,
-            162511,
-            1445,
-            1278,
-            1379,
-        };
-
         for (int i = 0; i < 14; i++)
         {
-            auto name = std::next(FileName.begin(), i);
+            auto name = std::next(MeshName.begin(), i);
             std::string path = *name;
             
             auto Buffer = bunny_obj;
@@ -118,7 +84,7 @@ int LoadMeshes()
             else if (i == 13)
                 Buffer = tunnel_slope_obj;
 
-            auto size = std::next(charSize.begin(), i);
+            auto size = std::next(MeshSize.begin(), i);
 
             std::fstream fileStream;
             fileStream.open(path);
@@ -145,37 +111,9 @@ int LoadShaders()
 {
     if (CreateDirectory("Shaders", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
     {
-        FILE* file;
-
-        std::list<std::string> FileName = {
-            "./Shaders/pink.frag",
-            "./Shaders/pink.vert",
-            "./Shaders/portal.frag",
-            "./Shaders/portal.vert",
-            "./Shaders/sky.frag",
-            "./Shaders/sky.vert",
-            "./Shaders/texture.frag",
-            "./Shaders/texture.vert",
-            "./Shaders/texture_array.frag",
-            "./Shaders/texture_array.vert",
-        };
-
-        std::list<int> charSize = {
-            178,
-            156,
-            258,
-            209,
-            496,
-            325,
-            313,
-            320,
-            320,
-            320,
-        };
-
         for (int i = 0; i < 10; i++)
         {
-            auto name = std::next(FileName.begin(), i);
+            auto name = std::next(ShadName.begin(), i);
             std::string path = *name;            
 
             auto Buffer = pink_frag;
@@ -200,7 +138,7 @@ int LoadShaders()
             else if (i == 9)
                 Buffer = texture_array_vert;
 
-            auto size = std::next(charSize.begin(), i);
+            auto size = std::next(ShadSize.begin(), i);
 
             std::fstream fileStream;
             fileStream.open(path);
@@ -227,31 +165,9 @@ int LoadTextures()
 {
     if (CreateDirectory("Textures", NULL) || ERROR_ALREADY_EXISTS == GetLastError())
     {
-        FILE* file;
-
-        std::list<std::string> FileName = {
-            "./Textures/checker_gray.bmp",
-            "./Textures/checker_green.bmp",
-            "./Textures/floorplan_textures.bmp",
-            "./Textures/gold.bmp",
-            "./Textures/three_room.bmp",
-            "./Textures/three_room2.bmp",
-            "./Textures/white.bmp",
-        };
-
-        std::list<int> charSize = {
-            102,
-            102,
-            786486,
-            58,
-            3126,
-            3126,
-            58,
-        };
-
         for (int i = 0; i < 7; i++)
         {
-            auto name = std::next(FileName.begin(), i);
+            auto name = std::next(TexturesName.begin(), i);
             std::string path = *name;
 
             auto Buffer = checker_gray_bmp;
@@ -270,7 +186,7 @@ int LoadTextures()
             else if (i == 6)
                 Buffer = white_bmp;
 
-            auto size = std::next(charSize.begin(), i);
+            auto size = std::next(TexturesSize.begin(), i);
 
             std::fstream fileStream;
             fileStream.open(path);

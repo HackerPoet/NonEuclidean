@@ -1,5 +1,33 @@
 #pragma once
 
+// filename's list
+std::list<std::string> ShadName = {
+    "./Shaders/pink.frag",
+    "./Shaders/pink.vert",
+    "./Shaders/portal.frag",
+    "./Shaders/portal.vert",
+    "./Shaders/sky.frag",
+    "./Shaders/sky.vert",
+    "./Shaders/texture.frag",
+    "./Shaders/texture.vert",
+    "./Shaders/texture_array.frag",
+    "./Shaders/texture_array.vert",
+};
+
+// size's list
+std::list<int> ShadSize = {
+    178,
+    156,
+    258,
+    209,
+    496,
+    325,
+    313,
+    320,
+    320,
+    320,
+};
+
 // pink.frag file
 unsigned char pink_frag[178] =
 {

@@ -1,5 +1,41 @@
 #pragma once
 
+// filename's list
+std::list<std::string> MeshName = {
+    "./Meshes/bunny.obj",
+    "./Meshes/double_quad.obj",
+    "./Meshes/floorplan.obj",
+    "./Meshes/ground.obj",
+    "./Meshes/ground_slope.obj",
+    "./Meshes/pillar.obj",
+    "./Meshes/pillar_room.obj",
+    "./Meshes/quad.obj",
+    "./Meshes/square_rooms.obj",
+    "./Meshes/suzanne.obj",
+    "./Meshes/teapot.obj",
+    "./Meshes/tunnel.obj",
+    "./Meshes/tunnel_scale.obj",
+    "./Meshes/tunnel_slope.obj",
+};
+
+// size's list
+std::list<int> MeshSize = {
+    205917,
+    120,
+    24564,
+    96,
+    287,
+    30910,
+    1913,
+    102,
+    5479,
+    81336,
+    162511,
+    1445,
+    1278,
+    1379,
+};
+
 // bunny.obj file
 unsigned char bunny_obj[205917] =
 {
