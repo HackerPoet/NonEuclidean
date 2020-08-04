@@ -82,6 +82,10 @@ void Input::UpdateRaw() {
     exit(0);
   }
 
+  if(immediate_keys[SDL_SCANCODE_RETURN] && (immediate_keys[SDL_SCANCODE_LALT] || immediate_keys[SDL_SCANCODE_RALT])) {
+    key_press['\n'] =1;
+  }
+  
   for (int k='A'; k<='Z'; k++) {
     key[k] = immediate_keys[SDL_SCANCODE_A + (k - 'A')];
     key_press[k] = immediate_keys[SDL_SCANCODE_A + (k - 'A')];

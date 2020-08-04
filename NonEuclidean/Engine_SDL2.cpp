@@ -28,6 +28,23 @@ void Engine::SetupInputs() {
   // not needed
 }
 
+void Engine::ToggleFullscreen() {
+  if (isFullscreen) {
+    iWidth=GH_SCREEN_WIDTH;
+    iHeight=GH_SCREEN_HEIGHT;
+    SDL_SetWindowFullscreen(window,0);
+    SDL_SetWindowSize(window,iWidth,iHeight);
+  }
+  else {
+    SDL_DisplayMode DM;
+    SDL_GetCurrentDisplayMode(0, &DM);
+    iWidth=DM.w;
+    iHeight=DM.h;
+    SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN);
+  }
+  isFullscreen = !isFullscreen;
+}
+
 void Engine::CreateGLWindow() {
   iWidth = GH_SCREEN_WIDTH;
   iHeight = GH_SCREEN_HEIGHT;
@@ -91,7 +108,9 @@ int Engine::EnterMessageLoop() {
     else {
 
       input.UpdateRaw();
-
+      if (input.key_press['\n'] && event.key.repeat == 0) {
+        ToggleFullscreen();
+      }
       //Confine the cursor
       ConfineCursor();
 
