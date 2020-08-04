@@ -82,8 +82,8 @@ void Input::UpdateRaw() {
     key_press[k] = immediate_keys[SDL_SCANCODE_A + (k - 'A')];
   }
   for (int k='0'; k<='9'; k++) {
-    key[k] = immediate_keys[SDL_SCANCODE_0 + (k - '0')];
-    key_press[k] = immediate_keys[SDL_SCANCODE_0 + (k - '0')];
+    key[k] = immediate_keys[SDL_SCANCODE_1 + (k - '1')];
+    key_press[k] = immediate_keys[SDL_SCANCODE_1 + (k - '1')];
   }
 }
 
