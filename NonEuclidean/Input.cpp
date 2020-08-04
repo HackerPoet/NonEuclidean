@@ -77,6 +77,11 @@ void Input::UpdateRaw() {
 
   // read key state
   const uint8_t* immediate_keys = SDL_GetKeyboardState(nullptr);
+  
+  if (immediate_keys[SDL_SCANCODE_ESCAPE]) {
+    exit(0);
+  }
+
   for (int k='A'; k<='Z'; k++) {
     key[k] = immediate_keys[SDL_SCANCODE_A + (k - 'A')];
     key_press[k] = immediate_keys[SDL_SCANCODE_A + (k - 'A')];
