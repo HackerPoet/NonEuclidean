@@ -6,7 +6,12 @@ public:
   Input();
 
   void EndFrame();
+
+#if defined(_WIN32)
   void UpdateRaw(const tagRAWINPUT* raw);
+#else
+  void UpdateRaw();
+#endif
 
   //Keyboard
   bool key[256];

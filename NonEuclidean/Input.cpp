@@ -1,6 +1,10 @@
 #include "Input.h"
 #include "GameHeader.h"
-#include <Windows.h>
+#if defined(_WIN32)
+  #include <Windows.h>
+#else
+  #include "SDL.h"
+#endif
 #include <memory>
 
 Input::Input() {
@@ -15,6 +19,8 @@ void Input::EndFrame() {
   mouse_ddx = 0.0f;
   mouse_ddy = 0.0f;
 }
+
+#if defined(_WIN32)
 
 void Input::UpdateRaw(const tagRAWINPUT* raw) {
   static BYTE buffer[2048];
@@ -44,3 +50,41 @@ void Input::UpdateRaw(const tagRAWINPUT* raw) {
     //TODO:
   }
 }
+
+#else
+
+void Input::UpdateRaw() {
+
+  // read mouse position and buttons
+  int mouse_x, mouse_y;
+  uint32_t state = SDL_GetRelativeMouseState(&mouse_x, &mouse_y);
+  mouse_dx = (float)mouse_x;
+  mouse_dy = (float)mouse_y;
+  mouse_ddx += mouse_dx;
+  mouse_ddy += mouse_dy;
+  if (state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+    mouse_button[0] = true;
+    mouse_button_press[0] = true;
+  }
+  if (state & SDL_BUTTON(SDL_BUTTON_MIDDLE)) {
+    mouse_button[1] = true;
+    mouse_button_press[1] = true;
+  }
+  if (state & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+    mouse_button[2] = true;
+    mouse_button_press[2] = true;
+  }
+
+  // read key state
+  const uint8_t* immediate_keys = SDL_GetKeyboardState(nullptr);
+  for (int k='A'; k<='Z'; k++) {
+    key[k] = immediate_keys[SDL_SCANCODE_A + (k - 'A')];
+    key_press[k] = immediate_keys[SDL_SCANCODE_A + (k - 'A')];
+  }
+  for (int k='0'; k<='9'; k++) {
+    key[k] = immediate_keys[SDL_SCANCODE_0 + (k - '0')];
+    key_press[k] = immediate_keys[SDL_SCANCODE_0 + (k - '0')];
+  }
+}
+
+#endif

@@ -9,7 +9,11 @@
 #include "Scene.h"
 #include "Sky.h"
 #include <GL/glew.h>
-#include <windows.h>
+#if defined(_WIN32)
+  #include <windows.h>
+#else
+  #include "SDL.h"
+#endif
 #include <memory>
 #include <vector>
 
@@ -23,26 +27,46 @@ public:
   void Render(const Camera& cam, GLuint curFBO, const Portal* skipPortal);
   void LoadScene(int ix);
 
+#if defined(_WIN32)
   LRESULT WindowProc(HWND hCurWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+#endif
 
   const Player& GetPlayer() const { return *player; }
   float NearestPortalDist() const;
 
 private:
+  bool InitOSWrapper();
   void CreateGLWindow();
+  void DestroyGLWindow();
   void InitGLObjects();
   void DestroyGLObjects();
   void SetupInputs();
   void ConfineCursor();
   void ToggleFullscreen();
+  int EnterMessageLoop();
+  void PeriodicRender(int64_t cur_ticks);
+  void SwapBuffers();
+  void EnableVSync();
 
-  HDC   hDC;           // device context
-  HGLRC hRC;				   // opengl context
-  HWND  hWnd;				   // window
-  HINSTANCE hInstance; // process id
+#if defined(_WIN32)
+  HWND  hWnd = nullptr;         // window
+  HDC   hDC = nullptr;          // device context
+  HGLRC hRC = nullptr;          // opengl context
+  HINSTANCE hInstance;          // process id
 
   LONG iWidth;         // window width
   LONG iHeight;        // window height
+#else
+  SDL_Window* window = nullptr;
+  SDL_GLContext glContext = nullptr;
+  int iWidth = 0;
+  int iHeight = 0;
+#endif
+
+  int64_t ticks_per_step = 0;
+
+  bool isGood = false;          // initialized without problems
+  bool isWindowGood = false;    // window successfully created and initialized
   bool isFullscreen;   // fullscreen state
 
   Camera main_cam;
