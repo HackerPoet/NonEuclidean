@@ -45,7 +45,7 @@ private:
 
 // --- non-Windows ----------------------------------------------------------
 
-#include "SDL.h"
+#include <SDL2/SDL.h>
 
 class Timer {
 public:

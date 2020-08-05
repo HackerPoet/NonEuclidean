@@ -58,7 +58,7 @@ int Engine::Run() {
   return 0;
 }
 
-void Engine::PeriodicRender(int64_t cur_ticks) {
+void Engine::PeriodicRender(int64_t &cur_ticks) {
 
   //Used fixed time steps for updates
   const int64_t new_ticks = timer.GetTicks();

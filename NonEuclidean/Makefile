@@ -1,5 +1,5 @@
 CXX=g++ -c
-CXXFLAGS=-O2 -ggdb -I/usr/include/SDL2
+CXXFLAGS=-O2 -ggdb 
 LINK=g++
 LINKFLAGS=-lm -lSDL2 -lSDL2main -lGLEW -lGL
 

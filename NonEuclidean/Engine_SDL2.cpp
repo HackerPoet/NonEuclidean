@@ -6,7 +6,7 @@
 #include "Level4.h"
 #include "Level5.h"
 #include "Level6.h"
-#include "SDL.h"
+#include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <cmath>
 #include <iostream>
@@ -92,7 +92,10 @@ void Engine::EnableVSync() {
 }
 
 int Engine::EnterMessageLoop() {
-
+  if (GH_HIDE_MOUSE) {
+    SDL_SetWindowGrab(window,SDL_TRUE);
+    SDL_ShowCursor(SDL_DISABLE);
+  }
   //Setup the timer
   ticks_per_step = timer.SecondsToTicks(GH_DT);
   int64_t cur_ticks = timer.GetTicks();
@@ -131,7 +134,7 @@ int Engine::EnterMessageLoop() {
       }
 
       PeriodicRender(cur_ticks);
-      SwapBuffers();
+      SDL_GL_SwapWindow(window);
     }
   }
 
@@ -139,11 +142,6 @@ int Engine::EnterMessageLoop() {
 }
 
 void Engine::ConfineCursor()
-{
-  // TODO
-}
-
-void Engine::SwapBuffers()
-{
-  SDL_GL_SwapWindow(window);
+{ 
+  //not needed
 }

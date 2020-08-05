@@ -12,7 +12,7 @@
 #if defined(_WIN32)
   #include <windows.h>
 #else
-  #include "SDL.h"
+  #include <SDL2/SDL.h>
 #endif
 #include <memory>
 #include <vector>
@@ -44,8 +44,7 @@ private:
   void ConfineCursor();
   void ToggleFullscreen();
   int EnterMessageLoop();
-  void PeriodicRender(int64_t cur_ticks);
-  void SwapBuffers();
+  void PeriodicRender(int64_t &cur_ticks);
   void EnableVSync();
 
 #if defined(_WIN32)

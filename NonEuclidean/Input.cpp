@@ -3,7 +3,7 @@
 #if defined(_WIN32)
   #include <Windows.h>
 #else
-  #include "SDL.h"
+  #include <SDL2/SDL.h>
 #endif
 #include <memory>
 
