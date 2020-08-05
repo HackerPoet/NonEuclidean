@@ -1,5 +1,5 @@
 # NonEuclidean
-A NonEuclidean rendering engine for Win32(Windows) and SDL2(Windows,Linux,MacOs,etc.), written in C++ OpenGL.
+A NonEuclidean rendering engine for Win32 and SDL2, written in C++ OpenGL.
 To see what this code is about, check out this video:
 https://youtu.be/kEB11PQ9Eo8
 
