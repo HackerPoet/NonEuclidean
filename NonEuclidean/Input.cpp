@@ -74,26 +74,6 @@ void Input::UpdateRaw() {
     mouse_button[2] = true;
     mouse_button_press[2] = true;
   }
-
-  // read key state
-  const uint8_t* immediate_keys = SDL_GetKeyboardState(nullptr);
-  
-  if (immediate_keys[SDL_SCANCODE_ESCAPE]) {
-    exit(0);
-  }
-
-  if(immediate_keys[SDL_SCANCODE_RETURN] && (immediate_keys[SDL_SCANCODE_LALT] || immediate_keys[SDL_SCANCODE_RALT])) {
-    key_press['\n'] =1;
-  }
-  
-  for (int k='A'; k<='Z'; k++) {
-    key[k] = immediate_keys[SDL_SCANCODE_A + (k - 'A')];
-    key_press[k] = immediate_keys[SDL_SCANCODE_A + (k - 'A')];
-  }
-  for (int k='0'; k<='9'; k++) {
-    key[k] = immediate_keys[SDL_SCANCODE_1 + (k - '1')];
-    key_press[k] = immediate_keys[SDL_SCANCODE_1 + (k - '1')];
-  }
 }
 
 #endif

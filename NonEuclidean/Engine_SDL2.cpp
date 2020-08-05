@@ -107,35 +107,57 @@ int Engine::EnterMessageLoop() {
       if (event.type == SDL_QUIT) {
         break;
       }
-    }
-    else {
-
-      input.UpdateRaw();
-      if (input.key_press['\n'] && event.key.repeat == 0) {
-        ToggleFullscreen();
+      else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
+        auto keycode = event.key.keysym.sym;
+        auto mod = event.key.keysym.mod;
+        if (keycode == SDLK_ESCAPE) {
+          break;
+        }
+        else if (keycode == SDLK_RETURN && (mod == KMOD_LALT || mod == KMOD_RALT)  ) {
+          ToggleFullscreen();
+        }
+        else if (keycode >= 'a' && keycode <= 'z')
+        {
+          input.key_press[toupper(keycode)] = true;
+          input.key[toupper(keycode)] = true;
+        }
+        else if (keycode >= '0' && keycode <= '9') {
+          input.key_press[keycode] = true;
+          input.key[keycode] = true;
+        }
       }
-      //Confine the cursor
-      ConfineCursor();
-
-      if (input.key_press['1']) {
-        LoadScene(0);
-      } else if (input.key_press['2']) {
-        LoadScene(1);
-      } else if (input.key_press['3']) {
-        LoadScene(2);
-      } else if (input.key_press['4']) {
-        LoadScene(3);
-      } else if (input.key_press['5']) {
-        LoadScene(4);
-      } else if (input.key_press['6']) {
-        LoadScene(5);
-      } else if (input.key_press['7']) {
-        LoadScene(6);
+      else if (event.type == SDL_KEYUP) {
+        auto keycode = event.key.keysym.sym;
+        if (keycode >= 'a' && keycode <= 'z')
+        {
+          input.key[toupper(keycode)] = false;
+        }
+        else if (keycode >= '0' && keycode <= '9') {
+          input.key[keycode] = false;
+        }
       }
-
-      PeriodicRender(cur_ticks);
-      SDL_GL_SwapWindow(window);
     }
+    
+    input.UpdateRaw();
+
+    if (input.key_press['1']) {
+      LoadScene(0);
+    } else if (input.key_press['2']) {
+      LoadScene(1);
+    } else if (input.key_press['3']) {
+      LoadScene(2);
+    } else if (input.key_press['4']) {
+      LoadScene(3);
+    } else if (input.key_press['5']) {
+      LoadScene(4);
+    } else if (input.key_press['6']) {
+      LoadScene(5);
+    } else if (input.key_press['7']) {
+      LoadScene(6);
+    }
+
+    PeriodicRender(cur_ticks);
+    SDL_GL_SwapWindow(window);
   }
 
   return 0;
