@@ -1,5 +1,5 @@
 CXX=g++ -c
-CXXFLAGS=-O2 -ggdb 
+CXXFLAGS=-O3
 LINK=g++
 LINKFLAGS=-lm -lSDL2 -lSDL2main -lGLEW -lGL
 
