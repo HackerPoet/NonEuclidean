@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <GL/glew.h>
+#include <string>
 #include <vector>
 
 class Shader {
