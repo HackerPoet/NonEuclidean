@@ -1,6 +1,6 @@
-CXX=g++ -c
+CXX=c++ -c
 CXXFLAGS=-O3
-LINK=g++
+LINK=c++
 LINKFLAGS=-lm -lSDL2 -lSDL2main -lGLEW -lGL
 
 EXE=NonEuclidean
