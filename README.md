@@ -5,10 +5,12 @@ https://youtu.be/kEB11PQ9Eo8
 
 ## Source Code Dependencies
 Win32 - Add glew-2.1.0 to the main directory 
+
 SDL - Install glew and SDL libraries
 
 ## Building
 Win32 - Open NonEuclidean.sln
+
 SDL :
 ```sh
 cd NonEuclidean
