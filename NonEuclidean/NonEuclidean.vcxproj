@@ -154,6 +154,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Collider.cpp" />
     <ClCompile Include="Engine.cpp" />
+    <ClCompile Include="Engine_Win32.cpp" />
     <ClCompile Include="FrameBuffer.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Level1.cpp" />
