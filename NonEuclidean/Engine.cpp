@@ -1,11 +1,11 @@
 #include "Engine.h"
 #include "Physical.h"
-#include "Level1.h"
-#include "Level2.h"
-#include "Level3.h"
-#include "Level4.h"
-#include "Level5.h"
-#include "Level6.h"
+#include "Scenes/Level1.h"
+#include "Scenes/Level2.h"
+#include "Scenes/Level3.h"
+#include "Scenes/Level4.h"
+#include "Scenes/Level5.h"
+#include "Scenes/Level6.h"
 #include <GL/wglew.h>
 #include <cmath>
 #include <iostream>
