@@ -93,8 +93,7 @@ void Engine::EnableVSync() {
 
 int Engine::EnterMessageLoop() {
   if (GH_HIDE_MOUSE) {
-    SDL_SetWindowGrab(window,SDL_TRUE);
-    SDL_ShowCursor(SDL_DISABLE);
+    SDL_SetRelativeMouseMode(SDL_TRUE);
   }
   //Setup the timer
   ticks_per_step = timer.SecondsToTicks(GH_DT);
