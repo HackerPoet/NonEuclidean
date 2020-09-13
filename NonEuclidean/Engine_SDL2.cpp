@@ -112,7 +112,7 @@ int Engine::EnterMessageLoop() {
         if (keycode == SDLK_ESCAPE) {
           break;
         }
-        else if (keycode == SDLK_RETURN && (mod == KMOD_LALT || mod == KMOD_RALT)  ) {
+        else if (keycode == SDLK_RETURN && (mod & KMOD_LALT || mod & KMOD_RALT)  ) {
           ToggleFullscreen();
         }
         else if (keycode >= 'a' && keycode <= 'z')
