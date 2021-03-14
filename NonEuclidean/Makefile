@@ -1,7 +1,17 @@
 CXX=c++ -c
 CXXFLAGS=-O3
 LINK=c++
-LINKFLAGS=-lm -lSDL2 -lSDL2main -lGLEW -lGL
+LINKFLAGS=-lm -lSDL2 -lSDL2main -lGLEW 
+
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Linux)
+LINKFLAGS += -lGL
+endif
+
+ifeq ($(UNAME), Darwin)
+LINKFLAGS += -framework OpenGL 
+endif
 
 EXE=NonEuclidean
 
