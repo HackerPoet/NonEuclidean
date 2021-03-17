@@ -1,5 +1,5 @@
 CXX=c++ -c
-CXXFLAGS=-O3
+CXXFLAGS=-O3 -std=c++11
 LINK=c++
 LINKFLAGS=-lm -lSDL2 -lSDL2main -lGLEW 
 
