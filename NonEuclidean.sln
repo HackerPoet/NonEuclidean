@@ -22,7 +22,9 @@ Global
 		{F65CA4E7-62A0-4D48-A338-E7C156BE3899}.Release|x86.ActiveCfg = Release|Win32
 		{F65CA4E7-62A0-4D48-A338-E7C156BE3899}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-EndGlobal
+	GlobalSection(SolutionProperties)
+	#
+	#
+	
+#
+#
