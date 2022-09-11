@@ -19,7 +19,9 @@ bool Engine::InitOSWrapper() {
     SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
     return false;
   }
-
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   atexit(SDL_Quit); // SDL will be shut down automatically on app exit
   return true;
 }
@@ -28,19 +30,33 @@ void Engine::SetupInputs() {
   // not needed
 }
 
+// adapted from https://github.com/g8kig/LiteXL-PPC
+static int query_surface_scale(SDL_Window *window) {
+  int w_pixels, h_pixels;
+  int w_points, h_points;
+  SDL_GL_GetDrawableSize(window, &w_pixels, &h_pixels);
+  SDL_GetWindowSize(window, &w_points, &h_points);
+  /* We consider that the ratio pixel/point will always be an integer and
+     it is the same along the x and the y axis. */
+  assert(w_pixels % w_points == 0 && h_pixels % h_points == 0 && w_pixels / w_points == h_pixels / h_points);
+  return w_pixels / w_points;
+}
+
 void Engine::ToggleFullscreen() {
   if (isFullscreen) {
     iWidth=GH_SCREEN_WIDTH;
     iHeight=GH_SCREEN_HEIGHT;
     SDL_SetWindowFullscreen(window,0);
-    SDL_SetWindowSize(window,iWidth,iHeight);
+    int scale = query_surface_scale(window);
+    SDL_SetWindowSize(window,iWidth/scale,iHeight/scale);
   }
   else {
-    SDL_DisplayMode DM;
-    SDL_GetCurrentDisplayMode(0, &DM);
-    iWidth=DM.w;
-    iHeight=DM.h;
-    SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN);
+    int scale = query_surface_scale(window);
+    SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN_DESKTOP);
+    SDL_GetWindowSize(window,&iWidth,&iHeight);
+    iWidth*=scale;
+    iHeight*=scale;
+    SDL_SetWindowSize(window,iWidth,iHeight);
   }
   isFullscreen = !isFullscreen;
 }
@@ -48,7 +64,6 @@ void Engine::ToggleFullscreen() {
 void Engine::CreateGLWindow() {
   iWidth = GH_SCREEN_WIDTH;
   iHeight = GH_SCREEN_HEIGHT;
-
   window = SDL_CreateWindow(
     GH_TITLE,
     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -56,6 +71,10 @@ void Engine::CreateGLWindow() {
     SDL_WINDOW_OPENGL|SDL_WINDOW_ALLOW_HIGHDPI|
       (GH_START_FULLSCREEN ? SDL_WINDOW_FULLSCREEN : 0)
   );
+  int scale = query_surface_scale(window);
+  SDL_SetWindowSize(window,iWidth/scale,iHeight/scale);
+  SDL_SetWindowGrab(window,SDL_TRUE);
+  SDL_SetRelativeMouseMode(SDL_TRUE);
   if (!window) {
     SDL_Log("Unable to create GL window: %s", SDL_GetError());
     return;
@@ -92,9 +111,6 @@ void Engine::EnableVSync() {
 }
 
 int Engine::EnterMessageLoop() {
-  if (GH_HIDE_MOUSE) {
-    SDL_SetRelativeMouseMode(SDL_TRUE);
-  }
   //Setup the timer
   ticks_per_step = timer.SecondsToTicks(GH_DT);
   int64_t cur_ticks = timer.GetTicks();
