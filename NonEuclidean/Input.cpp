@@ -1,6 +1,10 @@
 #include "Input.h"
 #include "GameHeader.h"
-#include <Windows.h>
+#if defined(_WIN32)
+  #include <Windows.h>
+#else
+  #include <SDL2/SDL.h>
+#endif
 #include <memory>
 
 Input::Input() {
@@ -15,6 +19,8 @@ void Input::EndFrame() {
   mouse_ddx = 0.0f;
   mouse_ddy = 0.0f;
 }
+
+#if defined(_WIN32)
 
 void Input::UpdateRaw(const tagRAWINPUT* raw) {
   static BYTE buffer[2048];
@@ -44,3 +50,26 @@ void Input::UpdateRaw(const tagRAWINPUT* raw) {
     //TODO:
   }
 }
+
+#else
+
+void Input::UpdateRaw(unsigned state,int mouse_x,int mouse_y) {
+  mouse_dx = (float)mouse_x;
+  mouse_dy = (float)mouse_y;
+  mouse_ddx += mouse_dx;
+  mouse_ddy += mouse_dy;
+  if (state & SDL_BUTTON_LMASK) {
+    mouse_button[0] = true;
+    mouse_button_press[0] = true;
+  }
+  if (state & SDL_BUTTON_MMASK) {
+    mouse_button[1] = true;
+    mouse_button_press[1] = true;
+  }
+  if (state & SDL_BUTTON_RMASK) {
+    mouse_button[2] = true;
+    mouse_button_press[2] = true;
+  }
+}
+
+#endif
