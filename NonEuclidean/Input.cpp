@@ -53,24 +53,20 @@ void Input::UpdateRaw(const tagRAWINPUT* raw) {
 
 #else
 
-void Input::UpdateRaw() {
-
-  // read mouse position and buttons
-  int mouse_x, mouse_y;
-  uint32_t state = SDL_GetRelativeMouseState(&mouse_x, &mouse_y);
+void Input::UpdateRaw(unsigned state,int mouse_x,int mouse_y) {
   mouse_dx = (float)mouse_x;
   mouse_dy = (float)mouse_y;
   mouse_ddx += mouse_dx;
   mouse_ddy += mouse_dy;
-  if (state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+  if (state & SDL_BUTTON_LMASK) {
     mouse_button[0] = true;
     mouse_button_press[0] = true;
   }
-  if (state & SDL_BUTTON(SDL_BUTTON_MIDDLE)) {
+  if (state & SDL_BUTTON_MMASK) {
     mouse_button[1] = true;
     mouse_button_press[1] = true;
   }
-  if (state & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+  if (state & SDL_BUTTON_RMASK) {
     mouse_button[2] = true;
     mouse_button_press[2] = true;
   }
