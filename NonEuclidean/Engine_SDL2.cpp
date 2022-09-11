@@ -30,16 +30,13 @@ void Engine::SetupInputs() {
   // not needed
 }
 
-// adapted from https://github.com/g8kig/LiteXL-PPC
-static int query_surface_scale(SDL_Window *window) {
+// from https://github.com/g8kig/LiteXL-PPC
+static double query_surface_scale(SDL_Window *window) {
   int w_pixels, h_pixels;
   int w_points, h_points;
   SDL_GL_GetDrawableSize(window, &w_pixels, &h_pixels);
   SDL_GetWindowSize(window, &w_points, &h_points);
-  /* We consider that the ratio pixel/point will always be an integer and
-     it is the same along the x and the y axis. */
-  assert(w_pixels % w_points == 0 && h_pixels % h_points == 0 && w_pixels / w_points == h_pixels / h_points);
-  return w_pixels / w_points;
+  return double(w_pixels) / double(w_points);
 }
 
 void Engine::ToggleFullscreen() {
@@ -47,15 +44,15 @@ void Engine::ToggleFullscreen() {
     iWidth=GH_SCREEN_WIDTH;
     iHeight=GH_SCREEN_HEIGHT;
     SDL_SetWindowFullscreen(window,0);
-    int scale = query_surface_scale(window);
-    SDL_SetWindowSize(window,iWidth/scale,iHeight/scale);
+    double scale = query_surface_scale(window);
+    SDL_SetWindowSize(window,int(iWidth/scale),int(iHeight/scale));
   }
   else {
-    int scale = query_surface_scale(window);
+    double scale = query_surface_scale(window);
     SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN_DESKTOP);
     SDL_GetWindowSize(window,&iWidth,&iHeight);
-    iWidth*=scale;
-    iHeight*=scale;
+    iWidth=int(iWidth*scale);
+    iHeight=int(iHeight*scale);
     SDL_SetWindowSize(window,iWidth,iHeight);
   }
   isFullscreen = !isFullscreen;
@@ -71,10 +68,10 @@ void Engine::CreateGLWindow() {
     SDL_WINDOW_OPENGL|SDL_WINDOW_ALLOW_HIGHDPI|
       (GH_START_FULLSCREEN ? SDL_WINDOW_FULLSCREEN : 0)
   );
-  int scale = query_surface_scale(window);
-  SDL_SetWindowSize(window,iWidth/scale,iHeight/scale);
-  SDL_SetWindowGrab(window,SDL_TRUE);
-  SDL_SetRelativeMouseMode(SDL_TRUE);
+    double scale = query_surface_scale(window);
+    SDL_SetWindowSize(window,int(iWidth/scale),int(iHeight/scale));
+    SDL_SetWindowGrab(window,SDL_TRUE);
+    SDL_SetRelativeMouseMode(SDL_TRUE);
   if (!window) {
     SDL_Log("Unable to create GL window: %s", SDL_GetError());
     return;
@@ -118,15 +115,15 @@ int Engine::EnterMessageLoop() {
 
   SDL_Event event;
   while(true) {
-    if (SDL_PollEvent(&event)) {
+    while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
-        break;
+        return 0;
       }
       else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
         auto keycode = event.key.keysym.sym;
         auto mod = event.key.keysym.mod;
         if (keycode == SDLK_ESCAPE) {
-          break;
+          return 0;
         }
         else if (keycode == SDLK_RETURN && (mod & KMOD_LALT || mod & KMOD_RALT)  ) {
           ToggleFullscreen();
@@ -151,10 +148,11 @@ int Engine::EnterMessageLoop() {
           input.key[keycode] = false;
         }
       }
+      else if (event.type==SDL_MOUSEMOTION){
+        input.UpdateRaw(event.motion.state,event.motion.xrel,event.motion.yrel);
+      }
     }
     
-    input.UpdateRaw();
-
     if (input.key_press['1']) {
       LoadScene(0);
     } else if (input.key_press['2']) {
@@ -174,8 +172,6 @@ int Engine::EnterMessageLoop() {
     PeriodicRender(cur_ticks);
     SDL_GL_SwapWindow(window);
   }
-
-  return 0;
 }
 
 void Engine::ConfineCursor()
