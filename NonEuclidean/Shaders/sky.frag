@@ -9,7 +9,7 @@ precision highp float;
 in vec3 ex_normal;
 
 //Outputs
-out vec4 gl_FragColor;
+out vec4 FragColor;
 
 void main(void) {
 	vec3 n = normalize(ex_normal);
@@ -20,5 +20,5 @@ void main(void) {
 	float s = dot(n, LIGHT) - 1.0 + SUN_SIZE;
 	float sun = min(exp(s * SUN_SHARPNESS / SUN_SIZE), 1.0);
 	
-	gl_FragColor = vec4(max(sky, sun), 1.0);
+	FragColor = vec4(max(sky, sun), 1.0);
 }
