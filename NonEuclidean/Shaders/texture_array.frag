@@ -9,9 +9,9 @@ in vec3 ex_uv;
 in vec3 ex_normal;
 
 //Outputs
-out vec4 gl_FragColor;
+out vec4 FragColor;
 
 void main(void) {
 	float s = dot(ex_normal, LIGHT)*0.25 + 0.75;
-	gl_FragColor = vec4(texture(tex, ex_uv).rgb * s, 1.0);
+	FragColor = vec4(texture(tex, ex_uv).rgb * s, 1.0);
 }

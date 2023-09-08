@@ -64,6 +64,11 @@ Texture::Texture(const char* fname, int rows, int cols) {
   delete[] img;
 }
 
+Texture::~Texture()
+{
+  glDeleteTextures(1, &texId);
+}
+
 void Texture::Use() {
   if (is3D) {
     glBindTexture(GL_TEXTURE_2D_ARRAY, texId);
