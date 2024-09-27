@@ -9,7 +9,7 @@ precision highp float;
 in vec3 ex_normal;
 
 //Outputs
-out vec4 gl_FragColor;
+//out vec4 gl_FragColor;
 
 void main(void) {
 	vec3 n = normalize(ex_normal);

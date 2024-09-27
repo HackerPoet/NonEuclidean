@@ -6,7 +6,7 @@ uniform sampler2D tex;
 in vec4 ex_uv;
 
 //Outputs
-out vec4 gl_FragColor;
+//out vec4 gl_FragColor;
 
 void main(void) {
 	vec2 uv = (ex_uv.xy / ex_uv.w);

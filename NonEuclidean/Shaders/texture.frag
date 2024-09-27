@@ -9,7 +9,7 @@ in vec2 ex_uv;
 in vec3 ex_normal;
 
 //Outputs
-out vec4 gl_FragColor;
+//out vec4 gl_FragColor;
 
 void main(void) {
 	float s = dot(ex_normal, LIGHT)*0.5 + 0.5;
