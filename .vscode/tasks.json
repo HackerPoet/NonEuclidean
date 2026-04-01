@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+        "label": "CMake Build",
+        "type": "shell",
+        "command": "cmake --build \"${workspaceFolder}/build\" --config Release",
+        "group": "build",
+        "presentation": {
+            "reveal": "always",
+            "panel": "shared"
+        },
+        "problemMatcher": "$msCompile"
+    },
+    {
+        "label": "Run NonEuclidean",
+        "type": "shell",
+        "command": "start \"\" /D \"${workspaceFolder}\\NonEuclidean\" \"${workspaceFolder}\\build\\NonEuclidean\\Release\\NonEuclidean.exe\"",
+        "group": {
+            "kind": "test",
+            "isDefault": true
+        },
+        "presentation": {
+            "reveal": "always",
+            "panel": "shared"
+        },
+        "problemMatcher": []
+    },
+    {
+        "label": "Build and Run",
+        "dependsOn": [
+            "CMake Build",
+            "Run NonEuclidean"
+        ],
+        "dependsOrder": "sequence",
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        },
+        "presentation": {
+            "reveal": "always",
+            "panel": "shared"
+        },
+        "problemMatcher": []
+    }
+]
+}

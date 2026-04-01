@@ -27,7 +27,7 @@ static const int GH_FBO_SIZE = 2048;
 static const int GH_MAX_RECURSION = 4;
 
 //Gameplay
-static const float GH_MOUSE_SENSITIVITY = 0.005f;
+static const float GH_MOUSE_SENSITIVITY = 0.003f;
 static const float GH_MOUSE_SMOOTH = 0.5f;
 static const float GH_WALK_SPEED = 2.9f;
 static const float GH_WALK_ACCEL = 50.0f;
