@@ -26,7 +26,7 @@ LRESULT WINAPI StaticWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
   return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-Engine::Engine() : hWnd(NULL), hDC(NULL), hRC(NULL) {
+Engine::Engine() : hWnd(NULL), hDC(NULL), hRC(NULL), ssaaFBO(0), ssaaColorBuf(0), ssaaDepthBuf(0) {
   GH_ENGINE = this;
   GH_INPUT = &input;
   isFullscreen = false;
@@ -120,12 +120,20 @@ int Engine::Run() {
       //Setup camera for rendering
       const float n = GH_CLAMP(NearestPortalDist() * 0.5f, GH_NEAR_MIN, GH_NEAR_MAX);
       main_cam.worldView = player->WorldToCam();
-      main_cam.SetSize(iWidth, iHeight, n, GH_FAR);
-      main_cam.UseViewport();
 
-      //Render scene
+      //Render to SSAA FBO at 2x resolution
+      glBindFramebuffer(GL_FRAMEBUFFER, ssaaFBO);
+      main_cam.SetSize(iWidth * GH_SSAA_FACTOR, iHeight * GH_SSAA_FACTOR, n, GH_FAR);
+      main_cam.UseViewport();
       GH_REC_LEVEL = GH_MAX_RECURSION;
-      Render(main_cam, 0, nullptr);
+      Render(main_cam, ssaaFBO, nullptr);
+
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, ssaaFBO);
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+      glBlitFramebuffer(0, 0, iWidth * GH_SSAA_FACTOR, iHeight * GH_SSAA_FACTOR,
+                        0, 0, iWidth, iHeight,
+                        GL_COLOR_BUFFER_BIT, GL_LINEAR);
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
       SwapBuffers(hDC);
     }
   }
@@ -293,6 +301,10 @@ LRESULT Engine::WindowProc(HWND hCurWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
   case WM_SIZE:
     iWidth = LOWORD(lParam);
     iHeight = HIWORD(lParam);
+    if (ssaaFBO) {
+      DestroySSAABuffer();
+      CreateSSAABuffer();
+    }
     PostMessage(hCurWnd, WM_PAINT, 0, 0);
     return 0;
 
@@ -433,12 +445,42 @@ void Engine::InitGLObjects() {
 
   //Attempt to enalbe vsync (if failure then oh well)
   wglSwapIntervalEXT(1);
+
+  //Enable hardware MSAA hint and create the SSAA offscreen buffer
+  glEnable(GL_MULTISAMPLE);
+  CreateSSAABuffer();
 }
 
 void Engine::DestroyGLObjects() {
   curScene->Unload();
   vObjects.clear();
   vPortals.clear();
+  DestroySSAABuffer();
+}
+
+void Engine::CreateSSAABuffer() {
+  const int w = iWidth  * GH_SSAA_FACTOR;
+  const int h = iHeight * GH_SSAA_FACTOR;
+
+  glGenRenderbuffers(1, &ssaaColorBuf);
+  glBindRenderbuffer(GL_RENDERBUFFER, ssaaColorBuf);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, w, h);
+
+  glGenRenderbuffers(1, &ssaaDepthBuf);
+  glBindRenderbuffer(GL_RENDERBUFFER, ssaaDepthBuf);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
+
+  glGenFramebuffers(1, &ssaaFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, ssaaFBO);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, ssaaColorBuf);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  GL_RENDERBUFFER, ssaaDepthBuf);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Engine::DestroySSAABuffer() {
+  if (ssaaFBO)      { glDeleteFramebuffers(1,  &ssaaFBO);      ssaaFBO      = 0; }
+  if (ssaaColorBuf) { glDeleteRenderbuffers(1, &ssaaColorBuf); ssaaColorBuf = 0; }
+  if (ssaaDepthBuf) { glDeleteRenderbuffers(1, &ssaaDepthBuf); ssaaDepthBuf = 0; }
 }
 
 void Engine::SetupInputs() {

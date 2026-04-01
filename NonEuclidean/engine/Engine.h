@@ -35,6 +35,8 @@ private:
   void SetupInputs();
   void ConfineCursor();
   void ToggleFullscreen();
+  void CreateSSAABuffer();
+  void DestroySSAABuffer();
 
   HDC   hDC;           // device context
   HGLRC hRC;				   // opengl context
@@ -55,6 +57,10 @@ private:
   std::shared_ptr<Player> player;
 
   GLint occlusionCullingSupported;
+
+  GLuint ssaaFBO;
+  GLuint ssaaColorBuf;
+  GLuint ssaaDepthBuf;
 
   std::vector<std::shared_ptr<Scene>> vScenes;
   std::shared_ptr<Scene> curScene;

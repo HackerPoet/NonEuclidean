@@ -25,6 +25,7 @@ static const float GH_NEAR_MAX = 1e-1f;
 static const float GH_FAR = 100.0f;
 static const int GH_FBO_SIZE = 2048;
 static const int GH_MAX_RECURSION = 4;
+static const int GH_SSAA_FACTOR = 2;
 
 //Gameplay
 static const float GH_MOUSE_SENSITIVITY = 0.003f;
