@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/NonEuclidean/engine",
+                "${workspaceFolder}/NonEuclidean/render",
+                "${workspaceFolder}/NonEuclidean/levels",
+                "${workspaceFolder}/NonEuclidean/game",
+                "${workspaceFolder}/NonEuclidean/objects",
+                "${workspaceFolder}/build/_deps/glew-src/include"
+            ],
+            "defines": [
+                "GLEW_STATIC",
+                "WIN32_LEAN_AND_MEAN",
+                "_WINDOWS"
+            ],
+            "cppStandard": "c++14",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}
