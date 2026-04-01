@@ -3,6 +3,8 @@
 *.pdb
 *.vs
 Debug/
+build/
+.config/
 Release/
 Floorplan/
 Thumbs.db
