@@ -6,6 +6,7 @@
 #include "Level4.h"
 #include "Level5.h"
 #include "Level6.h"
+#include "Level7.h"
 #include <GL/wglew.h>
 #include <cmath>
 #include <iostream>
@@ -45,8 +46,9 @@ Engine::Engine() : hWnd(NULL), hDC(NULL), hRC(NULL) {
   vScenes.push_back(std::shared_ptr<Scene>(new Level4));
   vScenes.push_back(std::shared_ptr<Scene>(new Level5));
   vScenes.push_back(std::shared_ptr<Scene>(new Level6));
+  vScenes.push_back(std::shared_ptr<Scene>(new Level7));
 
-  LoadScene(0);
+  LoadScene(7);
 
   sky.reset(new Sky);
 }
@@ -101,6 +103,8 @@ int Engine::Run() {
         LoadScene(5);
       } else if (input.key_press['7']) {
         LoadScene(6);
+      } else if (input.key_press['8']) {
+        LoadScene(7);
       }
 
       //Used fixed time steps for updates

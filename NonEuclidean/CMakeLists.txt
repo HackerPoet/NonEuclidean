@@ -14,6 +14,7 @@ set(SOURCES
     levels/Level4.cpp
     levels/Level5.cpp
     levels/Level6.cpp
+    levels/Level7.cpp
     game/Collider.cpp
     game/Object.cpp
     game/Physical.cpp
