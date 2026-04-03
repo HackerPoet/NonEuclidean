@@ -70,6 +70,13 @@ void Level2::Load(World& world, Player& player) {
   world.lightPos = lightCube->pos;
   world.lightColor = lightCube->emissive;
 
+  std::shared_ptr<Object> accentLightCube = CreateLightCube(
+      Vector3(-(portalHalfWidth + 4.0f), portalHalfHeight * 0.65f, -portalDistance * 0.35f),
+      Vector3(2.6f, 3.0f, 4.4f));
+  world.objects.push_back(accentLightCube);
+  world.lightPos2 = accentLightCube->pos;
+  world.lightColor2 = accentLightCube->emissive;
+
   const Vector3 portalScale(portalHalfWidth, portalHalfHeight, 1.0f);
 
   // Keep the portals facing each other so Level 2 works as a simple portal test range.

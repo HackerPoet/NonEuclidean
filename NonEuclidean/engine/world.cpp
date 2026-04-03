@@ -6,6 +6,8 @@ void World::Clear() {
   sky.reset();
   lightPos = Vector3(0.0f);
   lightColor = Vector3(0.0f);
+  lightPos2 = Vector3(0.0f);
+  lightColor2 = Vector3(0.0f);
   ambientScale = 1.0f;
   lightVP.MakeIdentity();
   lightCookie.reset();

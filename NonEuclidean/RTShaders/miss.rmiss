@@ -19,6 +19,8 @@ layout(std140, binding = 2, set = 0) uniform UBO {
     layout(row_major) mat4 projInv;
     vec4 lightPos;
     vec4 lightColor;
+    vec4 lightPos2;
+    vec4 lightColor2;
     vec4 camPos;       // w = time_of_day
 };
 

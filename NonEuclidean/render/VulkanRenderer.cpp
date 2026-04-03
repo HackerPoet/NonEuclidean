@@ -1212,7 +1212,9 @@ void VulkanRenderer::Render(const Camera& cam, const World& world) {
       float projInv[16];  // offset 64
       float lightPos[4];  // offset 128
       float lightColor[4];// offset 144, w = ambient scale
-      float camPos[4];    // offset 160
+      float lightPos2[4]; // offset 160
+      float lightColor2[4];// offset 176
+      float camPos[4];    // offset 192
     };
     static_assert(sizeof(UBOData) <= 256, "UBO too large");
 
@@ -1224,6 +1226,10 @@ void VulkanRenderer::Render(const Camera& cam, const World& world) {
     ubo.lightPos[2] = world.lightPos.z;  ubo.lightPos[3] = 0;
     ubo.lightColor[0] = world.lightColor.x; ubo.lightColor[1] = world.lightColor.y;
     ubo.lightColor[2] = world.lightColor.z; ubo.lightColor[3] = world.ambientScale;
+    ubo.lightPos2[0] = world.lightPos2.x; ubo.lightPos2[1] = world.lightPos2.y;
+    ubo.lightPos2[2] = world.lightPos2.z; ubo.lightPos2[3] = 0;
+    ubo.lightColor2[0] = world.lightColor2.x; ubo.lightColor2[1] = world.lightColor2.y;
+    ubo.lightColor2[2] = world.lightColor2.z; ubo.lightColor2[3] = 0;
     ubo.camPos[0] = cam.worldPos.x; ubo.camPos[1] = cam.worldPos.y;
     ubo.camPos[2] = cam.worldPos.z; ubo.camPos[3] = world.time_of_day;
 

@@ -12,6 +12,8 @@ struct World {
 
   Vector3 lightPos;
   Vector3 lightColor;
+  Vector3 lightPos2;
+  Vector3 lightColor2;
   float ambientScale = 1.0f; // multiplies the shader ambient term for this world
   Matrix4 lightVP; // light view-projection for shadow mapping
   std::shared_ptr<Texture> lightCookie; // projected light cookie texture
