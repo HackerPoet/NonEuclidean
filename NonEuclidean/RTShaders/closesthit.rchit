@@ -117,87 +117,40 @@ void main() {
     if (dot(geomNrm, worldNrm) < 0.0) {
         geomNrm = -geomNrm;
     }
-    vec3 pointLightPos = lightPos.xyz;
-    float ptLen = length(lightColor.xyz); // 0 when no light placed
+    const int MAX_POINT_LIGHTS = 2;
 
-    // Build two portal-visibility lists:
-    //   1) portals visible from the shaded world-space hit point
-    //   2) portals visible from the point light position
-    //
-    // These are geometric visibility tests to the portal center, not full
-    // portal transport/pathfinding. They give later logic two stable lists
-    // to reason about: what the surface can see, and what the light can see.
-    //
-    // Each entry stores the portal instance index and which face is toward
-    // the origin point of that list.
-    //
-    // Using the portal center is a simple proxy for portal visibility. It will
-    // not detect cases where only part of the portal is visible, but it gives
-    // a stable per-hit list that later logic can use.
+    // Build the list of portals visible from the shaded world-space hit point.
+    // Each point light builds its own portal-visible list later so portal-
+    // warped lighting can be evaluated independently per light.
     const int MAX_VISIBLE_PORTALS = 16;
     uint visiblePortalList[MAX_VISIBLE_PORTALS];
     uint visiblePortalFace[MAX_VISIBLE_PORTALS];
-    int visiblePortalCount = 0;
-    uint visibleLightPortalList[MAX_VISIBLE_PORTALS];
-    uint visibleLightPortalFace[MAX_VISIBLE_PORTALS];
-    int visibleLightPortalCount = 0; {
+    int visiblePortalCount = 0; {
         int nInst = int(inst.length());
-        for (int portalIndex = 0; portalIndex < nInst; ++portalIndex) {
+        for (int portalIndex = 0; portalIndex < nInst && visiblePortalCount < MAX_VISIBLE_PORTALS; ++portalIndex) {
             if (inst[portalIndex].indices.y == 0u) continue; // skip non-portals
 
-            bool needWorldList = visiblePortalCount < MAX_VISIBLE_PORTALS;
-            bool needLightList = ptLen > 0.001 && visibleLightPortalCount < MAX_VISIBLE_PORTALS;
-            if (!needWorldList && !needLightList) break;
-
-            // Portal center and local axes in world space.
             vec3 portalPos = mulPoint(inst[portalIndex].model, vec3(0.0, 0.0, 0.0));
-
-            // Portal forward matches Object::Forward() in C++.
             vec3 portalFwd = normalize(mulDir(inst[portalIndex].normalMat, vec3(0.0, 0.0, -1.0)));
+            uint portalFace = dot(portalFwd, worldPos - portalPos) > 0.0 ? 0u : 1u;
+            vec3 toPortal = portalPos - worldPos;
+            float portalDist = length(toPortal);
+            if (portalDist <= 0.002) continue;
 
-            if (needWorldList) {
-                uint portalFace = dot(portalFwd, worldPos - portalPos) > 0.0 ? 0u : 1u;
-                vec3 toPortal = portalPos - worldPos;
-                float portalDist = length(toPortal);
-                if (portalDist > 0.002) {
-                    vec3 portalDir = toPortal / portalDist;
-                    vec3 portalOrigin = offsetRayOrigin(worldPos, geomNrm, portalDir);
+            vec3 portalDir = toPortal / portalDist;
+            vec3 portalOrigin = offsetRayOrigin(worldPos, geomNrm, portalDir);
 
-                    shadowPayload = 1.0;
-                    traceRayEXT(tlas,
-                        gl_RayFlagsOpaqueEXT,
-                        0x01, 1, 2, 1,
-                        portalOrigin, 0.001, portalDir, portalDist - 0.002,
-                        1);
+            shadowPayload = 1.0;
+            traceRayEXT(tlas,
+                gl_RayFlagsOpaqueEXT,
+                0x01, 1, 2, 1,
+                portalOrigin, 0.001, portalDir, portalDist - 0.002,
+                1);
 
-                    if (shadowPayload > 0.5) {
-                        visiblePortalList[visiblePortalCount] = uint(portalIndex);
-                        visiblePortalFace[visiblePortalCount] = portalFace;
-                        visiblePortalCount++;
-                    }
-                }
-            }
-
-            if (needLightList) {
-                uint portalFace = dot(portalFwd, pointLightPos - portalPos) > 0.0 ? 0u : 1u;
-                vec3 toPortal = portalPos - pointLightPos;
-                float portalDist = length(toPortal);
-                if (portalDist > 0.002) {
-                    vec3 portalDir = toPortal / portalDist;
-
-                    shadowPayload = 1.0;
-                    traceRayEXT(tlas,
-                        gl_RayFlagsOpaqueEXT,
-                        0x01, 1, 2, 1,
-                        pointLightPos + portalDir * 0.001, 0.001, portalDir, portalDist - 0.002,
-                        1);
-
-                    if (shadowPayload > 0.5) {
-                        visibleLightPortalList[visibleLightPortalCount] = uint(portalIndex);
-                        visibleLightPortalFace[visibleLightPortalCount] = portalFace;
-                        visibleLightPortalCount++;
-                    }
-                }
+            if (shadowPayload > 0.5) {
+                visiblePortalList[visiblePortalCount] = uint(portalIndex);
+                visiblePortalFace[visiblePortalCount] = portalFace;
+                visiblePortalCount++;
             }
         }
     }
@@ -216,11 +169,42 @@ void main() {
     // Accumulate every valid point-light path that reaches this surface.
     // This includes the direct path plus one-hop portal-warped paths found by
     // pairing a portal visible from worldPos with its connected portal that is
-    // visible from the light. Paths are summed rather than collapsed to one.
+    // visible from each light. Paths are summed rather than collapsed to one.
     vec3 ptDiffuse = vec3(0.0);
     vec3 ptSpecular = vec3(0.0);
+    const float PORTAL_MATCH_EPS = 0.05;
+    for (int lightIndex = 0; lightIndex < MAX_POINT_LIGHTS; ++lightIndex) {
+        vec3 pointLightPos = lightIndex == 0 ? lightPos.xyz : lightPos2.xyz;
+        vec3 pointLightColor = lightIndex == 0 ? lightColor.xyz : lightColor2.xyz;
+        if (length(pointLightColor) <= 0.001) continue;
 
-    if (ptLen > 0.001) {
+        uint visibleLightPortalList[MAX_VISIBLE_PORTALS];
+        int visibleLightPortalCount = 0; {
+            int nInst = int(inst.length());
+            for (int portalIndex = 0; portalIndex < nInst && visibleLightPortalCount < MAX_VISIBLE_PORTALS; ++portalIndex) {
+                if (inst[portalIndex].indices.y == 0u) continue; // skip non-portals
+
+                vec3 portalPos = mulPoint(inst[portalIndex].model, vec3(0.0, 0.0, 0.0));
+                vec3 portalFwd = normalize(mulDir(inst[portalIndex].normalMat, vec3(0.0, 0.0, -1.0)));
+                vec3 toPortal = portalPos - pointLightPos;
+                float portalDist = length(toPortal);
+                if (portalDist <= 0.002) continue;
+
+                vec3 portalDir = toPortal / portalDist;
+                shadowPayload = 1.0;
+                traceRayEXT(tlas,
+                    gl_RayFlagsOpaqueEXT,
+                    0x01, 1, 2, 1,
+                    pointLightPos + portalDir * 0.001, 0.001, portalDir, portalDist - 0.002,
+                    1);
+
+                if (shadowPayload > 0.5) {
+                    visibleLightPortalList[visibleLightPortalCount] = uint(portalIndex);
+                    visibleLightPortalCount++;
+                }
+            }
+        }
+
         vec3 toDirectLight = pointLightPos - worldPos;
         float directDist = length(toDirectLight);
         if (directDist > 0.002) {
@@ -237,14 +221,13 @@ void main() {
 
             float directAtten = 1.0 / (1.0 + 0.09 * directDist + 0.032 * directDist * directDist);
             float directDiffuseTerm = max(dot(worldNrm, directDir), 0.0);
-            ptDiffuse += directDiffuseTerm * lightColor.xyz * albedo * directAtten * directShadow;
+            ptDiffuse += directDiffuseTerm * pointLightColor * albedo * directAtten * directShadow;
 
             vec3 H_direct = normalize(directDir + V);
             float directSpec = pow(max(dot(worldNrm, H_direct), 0.0), 32.0);
-            ptSpecular += directSpec * lightColor.xyz * 0.3 * directAtten * directShadow;
+            ptSpecular += directSpec * pointLightColor * 0.3 * directAtten * directShadow;
         }
 
-        const float PORTAL_MATCH_EPS = 0.05;
         for (int i = 0; i < visiblePortalCount; ++i) {
             uint portalIdx = visiblePortalList[i];
             InstanceInfo portalInfo = inst[portalIdx];
@@ -335,11 +318,11 @@ void main() {
             float portalDist = tHit + farDist;
             float portalAtten = 1.0 / (1.0 + 0.09 * portalDist + 0.032 * portalDist * portalDist);
             float portalDiffuseTerm = max(dot(worldNrm, currentDir), 0.0);
-            ptDiffuse += portalDiffuseTerm * lightColor.xyz * albedo * portalAtten * portalShadow;
+            ptDiffuse += portalDiffuseTerm * pointLightColor * albedo * portalAtten * portalShadow;
 
             vec3 H_portal = normalize(currentDir + V);
             float portalSpec = pow(max(dot(worldNrm, H_portal), 0.0), 32.0);
-            ptSpecular += portalSpec * lightColor.xyz * 0.3 * portalAtten * portalShadow;
+            ptSpecular += portalSpec * pointLightColor * 0.3 * portalAtten * portalShadow;
         }
     }
 
