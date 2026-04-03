@@ -1,7 +1,6 @@
 #pragma once
 #include "GameHeader.h"
 #include "Object.h"
-#include "FrameBuffer.h"
 #include "Mesh.h"
 #include "Resources.h"
 #include "Shader.h"
@@ -16,8 +15,8 @@ public:
       deltaInv.MakeIdentity();
     }
 
-    Matrix4 delta;
-    Matrix4 deltaInv;
+    Matrix4 delta;    // connected portal world -> this portal face world
+    Matrix4 deltaInv; // this portal face world -> connected portal world
     const Portal* fromPortal;
     const Portal* toPortal;
   };
@@ -25,7 +24,7 @@ public:
   Portal();
   virtual ~Portal() {}
 
-  virtual void Draw(const Camera& cam, GLuint curFBO) override;
+  virtual void Draw(const Camera& cam, uint32_t curFBO) override;
   void DrawPink(const Camera& cam);
 
   Vector3 GetBump(const Vector3& a) const;
@@ -40,6 +39,5 @@ public:
 
 private:
   std::shared_ptr<Shader> errShader;
-  FrameBuffer frameBuf[GH_MAX_RECURSION <= 1 ? 1 : GH_MAX_RECURSION - 1];
 };
 typedef std::vector<std::shared_ptr<Portal>> PPortalVec;

@@ -1,13 +1,16 @@
 #pragma once
-#include <GL/glew.h>
+#include <cstdint>
+#include <vector>
 
 class Texture {
 public:
   Texture(const char* fname, int rows, int cols);
 
-  void Use();
+  void Use() {}
+  void UseOnUnit(int /*unit*/) {}
 
-private:
-  GLuint texId;
-  bool is3D;
+  int width = 0;
+  int height = 0;
+  std::vector<uint8_t> pixels; // BGR, 3 bytes per pixel
+  bool is3D = false;
 };

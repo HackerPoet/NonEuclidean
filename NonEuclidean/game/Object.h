@@ -39,6 +39,10 @@ public:
   // Physical scale, only updated by portal scale changes
   float p_scale;
 
+  bool visible;
+  bool castShadow;
+  Vector3 emissive;
+
   std::shared_ptr<Mesh> mesh;
   std::shared_ptr<Texture> texture;
   std::shared_ptr<Shader> shader;

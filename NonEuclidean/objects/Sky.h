@@ -4,19 +4,16 @@
 
 class Sky {
 public:
-  Sky() {
+
+  int TimeOfDay = 3000; // 0 = midnight, 6000 = sunrise, 12000 = noon, 18000 = sunset
+
+  Sky(const char* shaderName = "sky") {
     mesh = AquireMesh("quad.obj");
-    shader = AquireShader("sky");
+    shader = AquireShader(shaderName);
   }
 
   void Draw(const Camera& cam) {
-    glDepthMask(GL_FALSE);
-    const Matrix4 mvp = cam.projection.Inverse();
-    const Matrix4 mv = cam.worldView.Inverse();
-    shader->Use();
-    shader->SetMVP(mvp.m, mv.m);
-    mesh->Draw();
-    glDepthMask(GL_TRUE);
+    // No-op: sky is handled by the RT miss shader
   }
 
 private:

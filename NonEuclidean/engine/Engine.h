@@ -8,7 +8,8 @@
 #include "Timer.h"
 #include "Scene.h"
 #include "Sky.h"
-#include <GL/glew.h>
+#include "world.h"
+#include "VulkanRenderer.h"
 #include <windows.h>
 #include <memory>
 #include <vector>
@@ -20,47 +21,40 @@ public:
 
   int Run();
   void Update();
-  void Render(const Camera& cam, GLuint curFBO, const Portal* skipPortal);
   void LoadScene(int ix);
 
   LRESULT WindowProc(HWND hCurWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
   const Player& GetPlayer() const { return *player; }
   float NearestPortalDist() const;
+  const Vector3& GetLightPos() const { return curWorld.lightPos; }
+  const Vector3& GetLightColor() const { return curWorld.lightColor; }
+  const Matrix4& GetLightVP() const { return curWorld.lightVP; }
+  bool HasLightCookie() const { return curWorld.lightCookie != nullptr; }
 
 private:
-  void CreateGLWindow();
-  void InitGLObjects();
-  void DestroyGLObjects();
+  void CreateWindow_();
   void SetupInputs();
   void ConfineCursor();
   void ToggleFullscreen();
-  void CreateSSAABuffer();
-  void DestroySSAABuffer();
 
-  HDC   hDC;           // device context
-  HGLRC hRC;				   // opengl context
-  HWND  hWnd;				   // window
-  HINSTANCE hInstance; // process id
+  HWND  hWnd;
+  HINSTANCE hInstance;
 
-  LONG iWidth;         // window width
-  LONG iHeight;        // window height
-  bool isFullscreen;   // fullscreen state
+  LONG iWidth;
+  LONG iHeight;
+  bool isFullscreen;
+  bool cursorCaptured;
 
   Camera main_cam;
   Input input;
   Timer timer;
 
-  std::vector<std::shared_ptr<Object>> vObjects;
-  std::vector<std::shared_ptr<Portal>> vPortals;
-  std::shared_ptr<Sky> sky;
+  World curWorld;
+  std::shared_ptr<Sky> defaultSky;
   std::shared_ptr<Player> player;
 
-  GLint occlusionCullingSupported;
-
-  GLuint ssaaFBO;
-  GLuint ssaaColorBuf;
-  GLuint ssaaDepthBuf;
+  VulkanRenderer renderer;
 
   std::vector<std::shared_ptr<Scene>> vScenes;
   std::shared_ptr<Scene> curScene;

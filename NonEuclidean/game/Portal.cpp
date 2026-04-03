@@ -9,54 +9,12 @@ Portal::Portal() : front(this), back(this) {
   errShader = AquireShader("pink");
 }
 
-void Portal::Draw(const Camera& cam, GLuint curFBO) {
-  assert(euler.x == 0.0f);
-  assert(euler.z == 0.0f);
-
-  //Draw pink to indicate end of render chain
-  if (GH_REC_LEVEL <= 0) {
-    DrawPink(cam);
-    return;
-  }
-
-  //Find normal relative to camera
-  Vector3 normal = Forward();
-  const Vector3 camPos = cam.worldView.Inverse().Translation();
-  const bool frontDirection = (camPos - pos).Dot(normal) > 0;
-  const Warp* warp = (frontDirection ? &front : &back);
-  if (frontDirection) {
-    normal = -normal;
-  }
-
-  //Extra clipping to prevent artifacts
-  const float extra_clip = GH_MIN(GH_ENGINE->NearestPortalDist() * 0.5f, 0.1f);
-
-  //Create new portal camera
-  Camera portalCam = cam;
-  portalCam.ClipOblique(pos - normal*extra_clip, -normal);
-  portalCam.worldView *= warp->delta;
-  portalCam.width = GH_FBO_SIZE;
-  portalCam.height = GH_FBO_SIZE;
-
-  //Render portal's view from new camera
-  frameBuf[GH_REC_LEVEL - 1].Render(portalCam, curFBO, warp->toPortal);
-  cam.UseViewport();
-
-  //Now we can render the portal texture to the screen
-  const Matrix4 mv = LocalToWorld();
-  const Matrix4 mvp = cam.Matrix() * mv;
-  shader->Use();
-  frameBuf[GH_REC_LEVEL - 1].Use();
-  shader->SetMVP(mvp.m, mv.m);
-  mesh->Draw();
+void Portal::Draw(const Camera& cam, uint32_t curFBO) {
+  // No-op: portals are rendered by VulkanRenderer via RT
 }
 
 void Portal::DrawPink(const Camera& cam) {
-  const Matrix4 mv = LocalToWorld();
-  const Matrix4 mvp = cam.Matrix() * mv;
-  errShader->Use();
-  errShader->SetMVP(mvp.m, mv.m);
-  mesh->Draw();
+  // No-op
 }
 
 Vector3 Portal::GetBump(const Vector3& a) const {
@@ -111,6 +69,9 @@ void Portal::Connect(std::shared_ptr<Portal>& a, std::shared_ptr<Portal>& b) {
 void Portal::Connect(Warp& a, Warp& b) {
   a.toPortal = b.fromPortal;
   b.toPortal = a.fromPortal;
+  // delta moves a point from the connected portal's world space back into
+  // this portal face's world space. deltaInv is the traversal warp used by
+  // portalhit.rchit to move from this face to the connected face.
   a.delta = a.fromPortal->LocalToWorld() * b.fromPortal->WorldToLocal();
   b.delta = b.fromPortal->LocalToWorld() * a.fromPortal->WorldToLocal();
   a.deltaInv = b.delta;

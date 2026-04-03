@@ -38,25 +38,26 @@ void Player::Update() {
   //Physics
   Physical::Update();
 
-  //Looking
-  Look(GH_INPUT->mouse_dx, GH_INPUT->mouse_dy);
+  //Looking and movement only when cursor is captured
+  if (GH_CURSOR_CAPTURED && !GH_LOCK_CAMERA) {
+    Look(GH_INPUT->mouse_dx, GH_INPUT->mouse_dy);
 
-  //Movement
-  float moveF = 0.0f;
-  float moveL = 0.0f;
-  if (GH_INPUT->key['W']) {
-    moveF += 1.0f;
+    float moveF = 0.0f;
+    float moveL = 0.0f;
+    if (GH_INPUT->key['W']) {
+      moveF += 1.0f;
+    }
+    if (GH_INPUT->key['S']) {
+      moveF -= 1.0f;
+    }
+    if (GH_INPUT->key['A']) {
+      moveL += 1.0f;
+    }
+    if (GH_INPUT->key['D']) {
+      moveL -= 1.0f;
+    }
+    Move(moveF, moveL);
   }
-  if (GH_INPUT->key['S']) {
-    moveF -= 1.0f;
-  }
-  if (GH_INPUT->key['A']) {
-    moveL += 1.0f;
-  }
-  if (GH_INPUT->key['D']) {
-    moveL -= 1.0f;
-  }
-  Move(moveF, moveL);
 
 #if 0
   //Jumping

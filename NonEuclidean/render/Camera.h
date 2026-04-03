@@ -18,9 +18,16 @@ public:
 
   Matrix4 projection;
   Matrix4 worldView;
+  Vector3 worldPos;
+
+  // Light state (warped through portals)
+  Vector3 lightPos;
+  Vector3 lightColor;
+  Matrix4 lightVP;
+  float shadowFarPlane;
 
   int width;
   int height;
-  float near;
-  float far;
+  float nearPlane;
+  float farPlane;
 };

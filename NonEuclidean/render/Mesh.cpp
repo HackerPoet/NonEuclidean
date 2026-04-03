@@ -5,7 +5,7 @@
 #include <string>
 #include <cassert>
 
-Mesh::Mesh(const char* fname) {
+Mesh::Mesh(const char* fname) : is3DTex(false) {
   //Open the file for reading
   std::ifstream fin(std::string("Meshes/") + fname);
   if (!fin) {
@@ -15,7 +15,6 @@ Mesh::Mesh(const char* fname) {
   //Temporaries
   std::vector<float> vert_palette;
   std::vector<float> uv_palette;
-  bool is3DTex = false;
 
   //Read the file
   std::string line;
@@ -126,46 +125,10 @@ Mesh::Mesh(const char* fname) {
       }
     }
   }
-
-  //Setup GL
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
-
-  glGenBuffers(NUM_VBOS, vbo);
-  {
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-    glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(verts[0]), verts.data(), GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  }
-  {
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-    glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(uvs[0]), uvs.data(), GL_STATIC_DRAW);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, (is3DTex ? 3 : 2), GL_FLOAT, GL_FALSE, 0, 0);
-  }
-  {
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
-    glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(normals[0]), normals.data(), GL_STATIC_DRAW);
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  }
+  // CPU-only: no GL upload
 }
 
 Mesh::~Mesh() {
-  glDeleteBuffers(NUM_VBOS, vbo);
-  glDeleteVertexArrays(1, &vao);
-}
-
-void Mesh::Draw() {
-  glBindVertexArray(vao);
-  glDrawArrays(GL_TRIANGLES, 0, (GLsizei)verts.size());
-}
-
-void Mesh::DebugDraw(const Camera& cam, const Matrix4& objMat) {
-  for (size_t i = 0; i < colliders.size(); ++i) {
-    colliders[i].DebugDraw(cam, objMat);
-  }
 }
 
 void Mesh::AddFace(

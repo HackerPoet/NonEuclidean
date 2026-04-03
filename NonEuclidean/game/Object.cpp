@@ -1,4 +1,5 @@
 #include "Object.h"
+#include "Engine.h"
 #include "Mesh.h"
 #include "Shader.h"
 #include "Texture.h"
@@ -7,7 +8,10 @@ Object::Object() :
   pos(0.0f),
   euler(0.0f),
   scale(1.0f),
-  p_scale(1.0f) {
+  p_scale(1.0f),
+  visible(true),
+  castShadow(true),
+  emissive(0.0f) {
 }
 
 void Object::Reset() {
@@ -18,16 +22,7 @@ void Object::Reset() {
 }
 
 void Object::Draw(const Camera& cam, uint32_t curFBO) {
-  if (shader && mesh) {
-    const Matrix4 mv = WorldToLocal().Transposed();
-    const Matrix4 mvp = cam.Matrix() * LocalToWorld();
-    shader->Use();
-    if (texture) {
-      texture->Use();
-    }
-    shader->SetMVP(mvp.m, mv.m);
-    mesh->Draw();
-  }
+  // No-op: VulkanRenderer handles all rendering
 }
 
 Vector3 Object::Forward() const {

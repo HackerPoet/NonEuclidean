@@ -1,82 +1,85 @@
 #include "Level2.h"
-#include "House.h"
+#include "DeadTree.h"
+#include "Object.h"
+#include "Resources.h"
+#include "Sky.h"
+#include <cmath>
 
-void Level2::Load(PObjectVec& objs, PPortalVec& portals, Player& player) {
-  std::shared_ptr<House> house1(new House("three_room.bmp"));
-  house1->pos = Vector3(0, 0, -20);
-  objs.push_back(house1);
+namespace {
 
-  std::shared_ptr<House> house2;
-  if (num_rooms > 4) {
-    house2.reset(new House("three_room2.bmp"));
-    house2->pos = Vector3(200, 0, -20);
-    objs.push_back(house2);
+std::shared_ptr<Portal> CreatePortal(World& world, const Vector3& pos, float yaw, const Vector3& scale) {
+  std::shared_ptr<Portal> portal(new Portal());
+  portal->pos = pos;
+  portal->euler.y = yaw;
+  portal->scale = scale;
+  world.portals.push_back(portal);
+  return portal;
+}
+
+void AddPortalFrameTrees(World& world, const Vector3& portalPos, float portalYaw, float portalHalfWidth, float treeScale, bool rotateFirstTreeLeft = false) {
+  const Vector3 right(std::cos(portalYaw), 0.0f, std::sin(portalYaw));
+  const Vector3 forward(-std::sin(portalYaw), 0.0f, -std::cos(portalYaw));
+  const float directions[2] = {-1.0f, 1.0f};
+  const float treeOffset = portalHalfWidth + 2.1f;
+  const float leftYawOffset = 10.0f * GH_PI / 180.0f;
+  const float rightYawOffset = -160.0f * GH_PI / 180.0f;
+
+  for (int treeIndex = 0; treeIndex < 2; ++treeIndex) {
+    float direction = directions[treeIndex];
+    std::shared_ptr<DeadTree> tree(new DeadTree());
+    tree->scale = Vector3(treeScale, treeScale, treeScale);
+    tree->pos = portalPos + right * (treeOffset * direction) - forward * 0.35f;
+    tree->pos.y = 0.0f;
+    tree->euler.y = portalYaw + (treeIndex == 0 ? leftYawOffset : rightYawOffset);
+    world.objects.push_back(tree);
   }
+}
 
-  if (num_rooms == 1) {
-    std::shared_ptr<Portal> portal1(new Portal());
-    house1->SetDoor1(*portal1);
-    portals.push_back(portal1);
+std::shared_ptr<Object> CreateLightCube(const Vector3& pos, const Vector3& color) {
+  std::shared_ptr<Object> cube(new Object());
+  cube->mesh = AquireMesh("cube.obj");
+  cube->shader = AquireShader("texture");
+  cube->texture = AquireTexture("white.bmp");
+  cube->pos = pos;
+  cube->castShadow = false;
+  cube->emissive = color;
+  return cube;
+}
 
-    std::shared_ptr<Portal> portal2(new Portal());
-    house1->SetDoor4(*portal2);
-    portals.push_back(portal2);
+}
 
-    Portal::Connect(portal1, portal2);
-  } else if (num_rooms == 2) {
-    std::shared_ptr<Portal> portal1(new Portal());
-    house1->SetDoor2(*portal1);
-    portals.push_back(portal1);
+void Level2::Load(World& world, Player& player) {
+  const bool wideLayout = true;
+  const float portalDistance = wideLayout ? 16.0f : 12.0f;
+  const float portalHalfWidth = wideLayout ? 6.3f : 2.0f;
+  const float portalHalfHeight = wideLayout ? 8.5f : 6.6f;
+  const float treeScale = wideLayout ? 3.6f : 3.2f;
 
-    std::shared_ptr<Portal> portal2(new Portal());
-    house1->SetDoor4(*portal2);
-    portals.push_back(portal2);
+  world.ambientScale = 0.7f;
+  world.sky = std::make_shared<Sky>("sky");
 
-    Portal::Connect(portal1, portal2);
-  } else if (num_rooms == 3) {
-    std::shared_ptr<Portal> portal1(new Portal());
-    house1->SetDoor3(*portal1);
-    portals.push_back(portal1);
+  std::shared_ptr<Object> ground(new Object());
+  ground->mesh = AquireMesh("ground_large.obj");
+  ground->shader = AquireShader("texture");
+  ground->texture = AquireTexture("proto_dark_01.bmp");
+  ground->scale = Vector3(250.0f, 1.0f, 250.0f);
+  world.objects.push_back(ground);
 
-    std::shared_ptr<Portal> portal2(new Portal());
-    house1->SetDoor4(*portal2);
-    portals.push_back(portal2);
+  std::shared_ptr<Object> lightCube = CreateLightCube(Vector3(0.0f, 4.0f, 0.0f), Vector3(4.0f, 3.8f, 3.2f));
+  world.objects.push_back(lightCube);
+  world.lightPos = lightCube->pos;
+  world.lightColor = lightCube->emissive;
 
-    Portal::Connect(portal1, portal2);
-  } else if (num_rooms == 4) {
-  } else if (num_rooms == 5) {
-    std::shared_ptr<Portal> portal1(new Portal());
-    house1->SetDoor4(*portal1);
-    portals.push_back(portal1);
+  const Vector3 portalScale(portalHalfWidth, portalHalfHeight, 1.0f);
 
-    std::shared_ptr<Portal> portal2(new Portal());
-    house2->SetDoor2(*portal2);
-    portals.push_back(portal2);
+  // Keep the portals facing each other so Level 2 works as a simple portal test range.
+  std::shared_ptr<Portal> portalA = CreatePortal(world, Vector3(0.0f, portalHalfHeight, -portalDistance), 0.0f, portalScale);
+  std::shared_ptr<Portal> portalB = CreatePortal(world, Vector3(0.0f, portalHalfHeight, portalDistance), 0.0f, portalScale);
 
-    std::shared_ptr<Portal> portal3(new Portal());
-    house2->SetDoor1(*portal3);
-    portals.push_back(portal3);
+  AddPortalFrameTrees(world, portalA->pos, portalA->euler.y, portalHalfWidth, treeScale);
+  AddPortalFrameTrees(world, portalB->pos, portalB->euler.y, portalHalfWidth, treeScale);
 
-    Portal::Connect(portal1->front, portal2->back);
-    Portal::Connect(portal2->front, portal3->back);
-    Portal::Connect(portal3->front, portal1->back);
-  } else if (num_rooms == 6) {
-    std::shared_ptr<Portal> portal1(new Portal());
-    house1->SetDoor4(*portal1);
-    portals.push_back(portal1);
+  Portal::Connect(portalA, portalB);
 
-    std::shared_ptr<Portal> portal2(new Portal());
-    house2->SetDoor3(*portal2);
-    portals.push_back(portal2);
-
-    std::shared_ptr<Portal> portal3(new Portal());
-    house2->SetDoor1(*portal3);
-    portals.push_back(portal3);
-
-    Portal::Connect(portal1->front, portal2->back);
-    Portal::Connect(portal2->front, portal3->back);
-    Portal::Connect(portal3->front, portal1->back);
-  }
-
-  player.SetPosition(Vector3(3, GH_PLAYER_HEIGHT, 3));
+  player.SetPosition(Vector3(0.0f, GH_PLAYER_HEIGHT, wideLayout ? 6.0f : 4.0f));
 }

@@ -1,6 +1,5 @@
 #include "Collider.h"
 #include "GameHeader.h"
-#include "GL/glew.h"
 #include <cassert>
 #include <iostream>
 
@@ -44,26 +43,8 @@ bool Collider::Collide(const Matrix4& localToUnit, Vector3& delta) const {
   }
 }
 
-void Collider::DebugDraw(const Camera& cam, const Matrix4& objMat) {
-  glDepthFunc(GL_ALWAYS);
-  glUseProgram(0);
-  glBegin(GL_LINE_LOOP);
-  glColor3f(0.0f, 1.0f, 0.0f);
-
-  const Matrix4 m = cam.Matrix() * objMat * mat;
-  Vector4 v;
-
-  v = m * Vector4(1, 1, 0, 1);
-  glVertex4f(v.x, v.y, v.z, v.w);
-  v = m * Vector4(1, -1, 0, 1);
-  glVertex4f(v.x, v.y, v.z, v.w);
-  v = m * Vector4(-1, -1, 0, 1);
-  glVertex4f(v.x, v.y, v.z, v.w);
-  v = m * Vector4(-1, 1, 0, 1);
-  glVertex4f(v.x, v.y, v.z, v.w);
-
-  glEnd();
-  glDepthFunc(GL_LESS);
+void Collider::DebugDraw(const Camera& /*cam*/, const Matrix4& /*objMat*/) {
+  // GL debug draw removed – no-op under Vulkan RT
 }
 
 void Collider::CreateSorted(const Vector3& da, const Vector3& c, const Vector3& db) {

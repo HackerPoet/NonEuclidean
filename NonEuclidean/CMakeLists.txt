@@ -2,12 +2,15 @@ set(SOURCES
     engine/Engine.cpp
     engine/Input.cpp
     engine/Main.cpp
+    engine/world.cpp
     render/Camera.cpp
     render/FrameBuffer.cpp
     render/Mesh.cpp
     render/Resources.cpp
     render/Shader.cpp
     render/Texture.cpp
+    render/ShadowMap.cpp
+    render/VulkanRenderer.cpp
     levels/Level1.cpp
     levels/Level2.cpp
     levels/Level3.cpp
@@ -15,6 +18,7 @@ set(SOURCES
     levels/Level5.cpp
     levels/Level6.cpp
     levels/Level7.cpp
+    levels/Level8.cpp
     game/Collider.cpp
     game/Object.cpp
     game/Physical.cpp
@@ -22,11 +26,13 @@ set(SOURCES
     game/Portal.cpp
 )
 
+
+
+
 # WIN32 sets the subsystem to Windows (WinMain entry point)
 add_executable(NonEuclidean WIN32 ${SOURCES})
 
 target_include_directories(NonEuclidean PRIVATE
-    "${GLEW_ROOT}/include"
     # Each subdirectory is added so that unqualified #include "Header.h" still resolves
     "${CMAKE_CURRENT_SOURCE_DIR}/engine"
     "${CMAKE_CURRENT_SOURCE_DIR}/render"
@@ -36,18 +42,17 @@ target_include_directories(NonEuclidean PRIVATE
 )
 
 target_compile_definitions(NonEuclidean PRIVATE
-    GLEW_STATIC
     WIN32_LEAN_AND_MEAN
+    VK_USE_PLATFORM_WIN32_KHR
+    VK_NO_PROTOTYPES
     $<$<CONFIG:Debug>:_DEBUG>
 )
 
-target_link_directories(NonEuclidean PRIVATE
-    "${GLEW_LIB_DIR}"
-)
-
 target_link_libraries(NonEuclidean PRIVATE
-    OpenGL32
-    glew32s
+    volk
+    glslang
+    SPIRV
+    glslang-default-resource-limits
 )
 
 if(MSVC)
@@ -67,6 +72,9 @@ add_custom_command(TARGET NonEuclidean POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/Shaders"
         "$<TARGET_FILE_DIR:NonEuclidean>/Shaders"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/RTShaders"
+        "$<TARGET_FILE_DIR:NonEuclidean>/RTShaders"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/Textures"
         "$<TARGET_FILE_DIR:NonEuclidean>/Textures"

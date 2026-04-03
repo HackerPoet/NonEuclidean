@@ -1,23 +1,15 @@
 #pragma once
-#include <GL/glew.h>
 #include <string>
-#include <vector>
 
 class Shader {
 public:
-  Shader(const char* name);
-  ~Shader();
+  Shader(const char* /*name*/) {}
+  ~Shader() {}
 
-  void Use();
-  void SetMVP(const float* mvp, const float* mv);
-
-private:
-  GLuint LoadShader(const char* fname, GLenum type);
-
-  std::vector<std::string> attribs;
-  GLuint vertId;
-  GLuint fragId;
-  GLuint progId;
-  GLuint mvpId;
-  GLuint mvId;
+  void Use() {}
+  void SetMVP(const float*, const float*) {}
+  void SetUniform(const char*, float) {}
+  void SetUniform(const char*, float, float, float) {}
+  void SetUniformMat4(const char*, const float*) {}
+  void SetUniformInt(const char*, int) {}
 };
