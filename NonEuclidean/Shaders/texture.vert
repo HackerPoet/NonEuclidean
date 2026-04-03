@@ -3,6 +3,8 @@
 //Globals
 uniform mat4 mvp;
 uniform mat4 mv;
+uniform mat4 model;
+uniform mat4 lightVP;
 
 //Inputs
 in vec3 in_pos;
@@ -12,9 +14,15 @@ in vec3 in_normal;
 //Outputs
 out vec2 ex_uv;
 out vec3 ex_normal;
+out vec3 ex_worldPos;
+out vec4 ex_shadowCoord;
 
 void main(void) {
-	gl_Position = mvp * vec4(in_pos, 1.0);
-	ex_uv = in_uv;
-	ex_normal = normalize((mv * vec4(in_normal, 0.0)).xyz);
+    gl_Position = mvp * vec4(in_pos, 1.0);
+    ex_uv = in_uv;
+    ex_normal = normalize((mv * vec4(in_normal, 0.0)).xyz);
+    vec4 worldPos = model * vec4(in_pos, 1.0);
+    ex_worldPos = worldPos.xyz;
+    // Transform to light clip space for cookie texture lookup
+    ex_shadowCoord = lightVP * worldPos;
 }

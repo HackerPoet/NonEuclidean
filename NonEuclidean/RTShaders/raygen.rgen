@@ -1,0 +1,78 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+// ════════════════════════════════════════════════════════════════════
+// raygen.rgen  —  RAY GENERATION  (one invocation per pixel)
+//
+// This is the entry point for every pixel. Vulkan calls main() once
+// per pixel (gl_LaunchIDEXT.xy). The full call chain for a pixel is:
+//
+//   raygen  ──primary──►  portalhit  (if portal quad hit, recurse)
+//           ──primary──►  closesthit (regular geometry — full shade)
+//           ──primary──►  miss       (nothing hit — sky)
+//
+//   closesthit internally fires shadow rays:
+//           ──shadow───►  shadowhit      (occluder hit — blocked)
+//           ──shadow───►  shadowmiss     (nothing hit — lit)
+//           ──shadow───►  portalshadow   (portal hit — blocked)
+//
+// After traceRayEXT returns, payload.rgb holds the HDR radiance for
+// this pixel. It is tone-mapped and gamma-corrected before storing.
+// ════════════════════════════════════════════════════════════════════
+
+layout(binding = 0, set = 0) uniform accelerationStructureEXT tlas;
+layout(binding = 1, set = 0, rgba8) uniform image2D image;
+
+layout(std140, binding = 2, set = 0) uniform UBO {
+    layout(row_major) mat4 viewInv;  // camera-to-world
+    layout(row_major) mat4 projInv;  // clip-to-camera
+    vec4 lightPos;
+    vec4 lightColor;
+    vec4 camPos;  // xyz = world pos, w = time_of_day [0,1]
+};
+
+// location 0: primary payload shared with closesthit, miss, portalhit
+//   .rgb = accumulated radiance
+//   .w   = portal recursion depth (0 on first launch)
+layout(location = 0) rayPayloadEXT vec4 payload;
+
+void main() {
+    // ── Reconstruct world-space ray for this pixel ─────────────────
+    // Center the sample in the pixel (+0.5), then remap to NDC [-1,1].
+    vec2 px = vec2(gl_LaunchIDEXT.xy) + 0.5;
+    vec2 uv = px / vec2(gl_LaunchSizeEXT.xy);
+    vec2 d = uv * 2.0 - 1.0;
+    d.y = -d.y; // Vulkan NDC has Y pointing down; flip to match GL convention
+
+    // Camera origin in world space (inverse view applied to (0,0,0,1))
+    vec4 origin = viewInv * vec4(0, 0, 0, 1);
+    // Unproject the NDC point through the inverse projection to get a
+    // camera-space direction, then rotate it into world space.
+    vec4 target = projInv * vec4(d.x, d.y, 1, 1);
+    vec4 dir = viewInv * vec4(normalize(target.xyz), 0);
+
+    // Reset payload. w=0 means we haven't entered any portals yet.
+    payload = vec4(0, 0, 0, 0);
+
+    // ── Fire the primary ray ───────────────────────────────────────
+    // mask 0xff  : test all instances (regular + portals)
+    // sbtOffset 0: for regular geometry → hit group 0 (closesthit)
+    //              for portal geometry  → hit group 2 (portalhit)
+    //              (portal instances are registered with sbtOffset=2,
+    //               and the SBT stride is 2, so 2+0=2)
+    // stride  2  : step size through SBT per geometry type
+    // missIdx 0  : no-hit → miss.rmiss (sky)
+    // tMin 0.001 : near clip — avoids self-intersection at ray origin
+    // tMax 10000 : far clip
+    traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xff,
+        0, 2, 0,
+        origin.xyz, 0.001, dir.xyz, 10000.0, 0);
+    // ── payload.rgb is now filled by whichever shader was invoked ──
+
+    // ── Tone mapping + gamma correction ───────────────────────────
+    // payload.rgb is HDR linear radiance; map to LDR [0,1] sRGB.
+    vec3 c = payload.rgb;
+    c = c / (c + 1.0);          // Reinhard operator: compresses bright values
+    c = pow(c, vec3(1.0 / 2.2)); // linear → sRGB gamma
+    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(c, 1.0));
+}
