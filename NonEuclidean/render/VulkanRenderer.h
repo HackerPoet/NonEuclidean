@@ -26,13 +26,23 @@ struct GPUInstanceInfo {
   float model[16];
   float normalMat[16];
   float emissive[4];       // xyz=emissive, w=unused
-  uint32_t indices[4];     // mesh, isPortal, texIdx, unused
-  float portalFrontWarp[16];    // this portal front face -> connected portal
-  float portalFrontReverse[16]; // connected portal -> this portal front face
-  float portalBackWarp[16];     // this portal back face -> connected portal
-  float portalBackReverse[16];  // connected portal -> this portal back face
+  uint32_t indices[4];     // mesh, isPortal, texIdx, portalWarpIndex
 };
-static_assert(sizeof(GPUInstanceInfo) == 416, "GPUInstanceInfo layout mismatch");
+static_assert(sizeof(GPUInstanceInfo) == 160, "GPUInstanceInfo layout mismatch");
+
+struct GPUPortalWarpInfo {
+  float frontWarp[16];    // this portal front face -> connected portal (deltaInv)
+  float frontReverse[16]; // connected portal -> this portal front face (delta)
+  float backWarp[16];     // this portal back face -> connected portal (deltaInv)
+  float backReverse[16];  // connected portal -> this portal back face (delta)
+  float center[4];        // precomputed world-space center xyz, w=unused
+  float forward[4];       // precomputed world-space forward dir xyz, w=unused
+  float axisX[4];         // precomputed world-space X axis xyz (includes scale)
+  float axisY[4];         // precomputed world-space Y axis xyz (includes scale)
+  float aabbMin[4];       // influence volume min xyz, w=unused
+  float aabbMax[4];       // influence volume max xyz, w=unused
+};
+static_assert(sizeof(GPUPortalWarpInfo) == 352, "GPUPortalWarpInfo layout mismatch");
 
 class VulkanRenderer {
 public:
@@ -115,6 +125,8 @@ private:
   VkBuffer uvBuffer = VK_NULL_HANDLE;  VkDeviceMemory uvMem = VK_NULL_HANDLE;
   VkBuffer meshOffBuffer = VK_NULL_HANDLE; VkDeviceMemory meshOffMem = VK_NULL_HANDLE;
   VkBuffer instanceBuffer = VK_NULL_HANDLE; VkDeviceMemory instanceMem = VK_NULL_HANDLE;
+  VkBuffer portalWarpBuffer = VK_NULL_HANDLE; VkDeviceMemory portalWarpMem = VK_NULL_HANDLE;
+  VkBuffer portalIndexBuffer = VK_NULL_HANDLE; VkDeviceMemory portalIndexMem = VK_NULL_HANDLE;
 
   struct TexGPU {
     VkImage image = VK_NULL_HANDLE;

@@ -25,27 +25,65 @@ struct InstanceInfo {
     mat4 model;
     mat4 normalMat;
     vec4 emissive;
-    uvec4 indices;      // x=meshIndex, y=isPortal, z=textureIndex
-    mat4 portalFrontWarp;    // this portal front face -> connected portal
-    mat4 portalFrontReverse; // connected portal -> this portal front face
-    mat4 portalBackWarp;     // this portal back face -> connected portal
-    mat4 portalBackReverse;  // connected portal -> this portal back face
+    uvec4 indices;      // x=meshIndex, y=isPortal, z=textureIndex, w=portalWarpIndex
 };
 layout(std430, row_major, binding = 3, set = 0) readonly buffer Instances {
     InstanceInfo inst[];
 };
 
-const int MAX_PORTAL_DEPTH = 4; // max times a single pixel can traverse portals
+struct PortalWarpInfo {
+    mat4 frontWarp;    // this portal front face -> connected portal (deltaInv)
+    mat4 frontReverse; // connected portal -> this portal front face (delta)
+    mat4 backWarp;     // this portal back face -> connected portal (deltaInv)
+    mat4 backReverse;  // connected portal -> this portal back face (delta)
+    vec4 center;       // precomputed world-space center xyz
+    vec4 forward;      // precomputed world-space forward dir xyz
+    vec4 axisX;        // precomputed world-space X axis xyz (includes scale)
+    vec4 axisY;        // precomputed world-space Y axis xyz (includes scale)
+    vec4 aabbMin;      // influence volume min xyz
+    vec4 aabbMax;      // influence volume max xyz
+};
+layout(std430, row_major, binding = 8, set = 0) readonly buffer PortalWarps {
+    PortalWarpInfo portalWarps[];
+};
+
+// Hash-based noise for breaking up the recursion-limit boundary
+float hash31(vec3 p) {
+    p = fract(p * vec3(443.8975, 397.2973, 491.1871));
+    p += dot(p, p.yzx + 19.19);
+    return fract((p.x + p.y) * p.z);
+}
+
+const int MAX_PORTAL_DEPTH = 12; // max times a single pixel can traverse portals
 
 void main() {
     float depth = payload.w;
     // Guard against infinite portal recursion (e.g. two portals facing each other)
     if (depth >= float(MAX_PORTAL_DEPTH)) {
-        payload.rgb = vec3(1.0, 0.0, 1.0); // magenta = recursion limit reached
+        // Still warp through the portal but trace against geometry only
+        // (mask 0x01 skips portal quads) so no further recursion occurs.
+        // Darken and add noise to hide the seam.
+        InstanceInfo ii = inst[gl_InstanceCustomIndexEXT];
+        PortalWarpInfo pw = portalWarps[ii.indices.w];
+        mat4 deltaInv;
+        if (gl_HitKindEXT == gl_HitKindFrontFacingTriangleEXT) {
+            deltaInv = pw.frontWarp;
+        } else {
+            deltaInv = pw.backWarp;
+        }
+        vec3 hitPt = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+        vec3 newOrigin = (deltaInv * vec4(hitPt, 1.0)).xyz;
+        vec3 newDir    = normalize((deltaInv * vec4(gl_WorldRayDirectionEXT, 0.0)).xyz);
+
+        traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0x01, 0, 2, 0, newOrigin, 0.001, newDir, 10000.0, 0);
+
+        float n = hash31(hitPt * 100.0 + newDir * 50.0);
+        payload.rgb = payload.rgb * 0.5 + (n - 0.5) * 0.08;
         return;
     }
 
     InstanceInfo ii = inst[gl_InstanceCustomIndexEXT];
+    PortalWarpInfo pw = portalWarps[ii.indices.w];
 
     // Select warp matrix based on which face of the portal quad was hit.
     // Front face: ray entered from the "front" side → warp to connected portal.
@@ -53,9 +91,9 @@ void main() {
     // This enables one-way portals if desired.
     mat4 deltaInv;
     if (gl_HitKindEXT == gl_HitKindFrontFacingTriangleEXT) {
-        deltaInv = ii.portalFrontWarp;
+        deltaInv = pw.frontWarp;
     } else {
-        deltaInv = ii.portalBackWarp;
+        deltaInv = pw.backWarp;
     }
 
     // Compute the exact world-space hit point on the portal surface

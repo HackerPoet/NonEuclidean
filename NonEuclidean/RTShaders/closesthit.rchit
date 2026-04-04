@@ -33,14 +33,29 @@ struct InstanceInfo {
     mat4 model;
     mat4 normalMat;
     vec4 emissive;      // xyz = emissive
-    uvec4 indices;      // x=meshIndex, y=isPortal, z=textureIndex
-    mat4 portalFrontWarp;
-    mat4 portalFrontReverse;
-    mat4 portalBackWarp;
-    mat4 portalBackReverse;
+    uvec4 indices;      // x=meshIndex, y=isPortal, z=textureIndex, w=portalWarpIndex
 };
 layout(std430, row_major, binding = 3, set = 0) readonly buffer Instances {
     InstanceInfo inst[];
+};
+
+struct PortalWarpInfo {
+    mat4 frontWarp;    // this portal front face -> connected portal (deltaInv)
+    mat4 frontReverse; // connected portal -> this portal front face (delta)
+    mat4 backWarp;     // this portal back face -> connected portal (deltaInv)
+    mat4 backReverse;  // connected portal -> this portal back face (delta)
+    vec4 center;       // precomputed world-space center xyz
+    vec4 forward;      // precomputed world-space forward dir xyz
+    vec4 axisX;        // precomputed world-space X axis xyz (includes scale)
+    vec4 axisY;        // precomputed world-space Y axis xyz (includes scale)
+    vec4 aabbMin;      // influence volume min xyz
+    vec4 aabbMax;      // influence volume max xyz
+};
+layout(std430, row_major, binding = 8, set = 0) readonly buffer PortalWarps {
+    PortalWarpInfo portalWarps[];
+};
+layout(std430, binding = 9, set = 0) readonly buffer PortalIndices {
+    uint portalIndices[];
 };
 layout(std430, binding = 4, set = 0) readonly buffer Positions {
     float pos[];
@@ -54,7 +69,7 @@ layout(std430, binding = 6, set = 0) readonly buffer UVs {
 layout(std430, binding = 7, set = 0) readonly buffer MeshOff {
     uint meshOff[];
 };
-layout(binding = 8, set = 0) uniform sampler2D textures[];
+layout(binding = 10, set = 0) uniform sampler2D textures[];
 
 vec3 getPos(uint i) {
     return vec3(pos[i*3], pos[i*3+1], pos[i*3+2]);
@@ -126,12 +141,17 @@ void main() {
     uint visiblePortalList[MAX_VISIBLE_PORTALS];
     uint visiblePortalFace[MAX_VISIBLE_PORTALS];
     int visiblePortalCount = 0; {
-        int nInst = int(inst.length());
-        for (int portalIndex = 0; portalIndex < nInst && visiblePortalCount < MAX_VISIBLE_PORTALS; ++portalIndex) {
-            if (inst[portalIndex].indices.y == 0u) continue; // skip non-portals
+        int nPortals = int(portalIndices.length());
 
-            vec3 portalPos = mulPoint(inst[portalIndex].model, vec3(0.0, 0.0, 0.0));
-            vec3 portalFwd = normalize(mulDir(inst[portalIndex].normalMat, vec3(0.0, 0.0, -1.0)));
+        for (int pi = 0; pi < nPortals && visiblePortalCount < MAX_VISIBLE_PORTALS; ++pi) {
+            uint portalIndex = portalIndices[pi];
+            PortalWarpInfo pw = portalWarps[inst[portalIndex].indices.w];
+
+            // AABB early-out: skip if surface point is outside portal influence volume
+            if (any(lessThan(worldPos, pw.aabbMin.xyz)) || any(greaterThan(worldPos, pw.aabbMax.xyz))) continue;
+
+            vec3 portalPos = pw.center.xyz;
+            vec3 portalFwd = pw.forward.xyz;
             uint portalFace = dot(portalFwd, worldPos - portalPos) > 0.0 ? 0u : 1u;
             vec3 toPortal = portalPos - worldPos;
             float portalDist = length(toPortal);
@@ -148,7 +168,7 @@ void main() {
                 1);
 
             if (shadowPayload > 0.5) {
-                visiblePortalList[visiblePortalCount] = uint(portalIndex);
+                visiblePortalList[visiblePortalCount] = portalIndex;
                 visiblePortalFace[visiblePortalCount] = portalFace;
                 visiblePortalCount++;
             }
@@ -180,12 +200,15 @@ void main() {
 
         uint visibleLightPortalList[MAX_VISIBLE_PORTALS];
         int visibleLightPortalCount = 0; {
-            int nInst = int(inst.length());
-            for (int portalIndex = 0; portalIndex < nInst && visibleLightPortalCount < MAX_VISIBLE_PORTALS; ++portalIndex) {
-                if (inst[portalIndex].indices.y == 0u) continue; // skip non-portals
+            int nPortals = int(portalIndices.length());
+            for (int pi = 0; pi < nPortals && visibleLightPortalCount < MAX_VISIBLE_PORTALS; ++pi) {
+                uint portalIndex = portalIndices[pi];
+                PortalWarpInfo pw = portalWarps[inst[portalIndex].indices.w];
 
-                vec3 portalPos = mulPoint(inst[portalIndex].model, vec3(0.0, 0.0, 0.0));
-                vec3 portalFwd = normalize(mulDir(inst[portalIndex].normalMat, vec3(0.0, 0.0, -1.0)));
+                // AABB early-out: skip if light is outside portal influence volume
+                if (any(lessThan(pointLightPos, pw.aabbMin.xyz)) || any(greaterThan(pointLightPos, pw.aabbMax.xyz))) continue;
+
+                vec3 portalPos = pw.center.xyz;
                 vec3 toPortal = portalPos - pointLightPos;
                 float portalDist = length(toPortal);
                 if (portalDist <= 0.002) continue;
@@ -199,7 +222,7 @@ void main() {
                     1);
 
                 if (shadowPayload > 0.5) {
-                    visibleLightPortalList[visibleLightPortalCount] = uint(portalIndex);
+                    visibleLightPortalList[visibleLightPortalCount] = portalIndex;
                     visibleLightPortalCount++;
                 }
             }
@@ -231,24 +254,24 @@ void main() {
         for (int i = 0; i < visiblePortalCount; ++i) {
             uint portalIdx = visiblePortalList[i];
             InstanceInfo portalInfo = inst[portalIdx];
+            PortalWarpInfo pw = portalWarps[portalInfo.indices.w];
 
             mat4 portalWarp = (visiblePortalFace[i] == 0u)
-            ? portalInfo.portalFrontWarp
-            : portalInfo.portalBackWarp;
+            ? pw.frontWarp
+            : pw.backWarp;
             mat4 portalReverse = (visiblePortalFace[i] == 0u)
-            ? portalInfo.portalFrontReverse
-            : portalInfo.portalBackReverse;
+            ? pw.frontReverse
+            : pw.backReverse;
 
-            vec3 portalPos = mulPoint(portalInfo.model, vec3(0.0, 0.0, 0.0));
-            vec3 portalFwd = normalize(mulDir(portalInfo.normalMat, vec3(0.0, 0.0, -1.0)));
-            vec3 portalX = mulDir(portalInfo.model, vec3(1.0, 0.0, 0.0));
-            vec3 portalY = mulDir(portalInfo.model, vec3(0.0, 1.0, 0.0));
+            vec3 portalPos = pw.center.xyz;
+            vec3 portalFwd = pw.forward.xyz;
+            vec3 portalX = pw.axisX.xyz;
+            vec3 portalY = pw.axisY.xyz;
 
             vec3 connectedPortalPos = mulPoint(portalWarp, portalPos);
             bool matchedLightPortal = false;
             for (int j = 0; j < visibleLightPortalCount; ++j) {
-                InstanceInfo lightPortalInfo = inst[visibleLightPortalList[j]];
-                vec3 lightPortalPos = mulPoint(lightPortalInfo.model, vec3(0.0, 0.0, 0.0));
+                vec3 lightPortalPos = portalWarps[inst[visibleLightPortalList[j]].indices.w].center.xyz;
                 if (length(lightPortalPos - connectedPortalPos) <= PORTAL_MATCH_EPS) {
                     matchedLightPortal = true;
                     break;

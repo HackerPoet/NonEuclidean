@@ -490,7 +490,7 @@ void VulkanRenderer::DestroyStorageImage() {
 // Descriptors
 // ============================================================
 void VulkanRenderer::CreateDescriptorLayout() {
-  VkDescriptorSetLayoutBinding bindings[9] = {};
+  VkDescriptorSetLayoutBinding bindings[11] = {};
   // 0: TLAS
   bindings[0].binding = 0;
   bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
@@ -506,30 +506,40 @@ void VulkanRenderer::CreateDescriptorLayout() {
   bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   bindings[2].descriptorCount = 1;
   bindings[2].stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR;
-  // 3-7: Storage buffers
+  // 3-7: Storage buffers (instances, positions, normals, uvs, meshOffsets)
   for (int i = 3; i <= 7; i++) {
     bindings[i].binding = i;
     bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bindings[i].descriptorCount = 1;
     bindings[i].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
   }
-  // 8: Texture array (variable count)
+  // 8: Portal warp buffer
   bindings[8].binding = 8;
-  bindings[8].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  bindings[8].descriptorCount = 128; // max
+  bindings[8].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  bindings[8].descriptorCount = 1;
   bindings[8].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+  // 9: Portal index buffer
+  bindings[9].binding = 9;
+  bindings[9].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  bindings[9].descriptorCount = 1;
+  bindings[9].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+  // 10: Texture array (variable count — must be the highest binding)
+  bindings[10].binding = 10;
+  bindings[10].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  bindings[10].descriptorCount = 128; // max
+  bindings[10].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
 
-  VkDescriptorBindingFlags bindFlags[9] = {};
-  bindFlags[8] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-                 VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+  VkDescriptorBindingFlags bindFlags[11] = {};
+  bindFlags[10] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
+                  VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
 
   VkDescriptorSetLayoutBindingFlagsCreateInfo flagsCI =
     {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO};
-  flagsCI.bindingCount = 9;
+  flagsCI.bindingCount = 11;
   flagsCI.pBindingFlags = bindFlags;
 
   VkDescriptorSetLayoutCreateInfo ci = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-  ci.bindingCount = 9;
+  ci.bindingCount = 11;
   ci.pBindings = bindings;
   ci.pNext = &flagsCI;
   vkCreateDescriptorSetLayout(device, &ci, nullptr, &descLayout);
@@ -816,6 +826,8 @@ void VulkanRenderer::UploadScene(const World& world) {
 
   // Process objects and portals
   std::vector<GPUInstanceInfo> instanceInfos;
+  std::vector<GPUPortalWarpInfo> portalWarpInfos;
+  std::vector<uint32_t> portalInstanceIndices; // compact list of portal instance indices
   struct TLASInstance {
     Matrix4 transform;
     uint32_t customIndex;
@@ -873,15 +885,40 @@ void VulkanRenderer::UploadScene(const World& world) {
     info.indices[0] = mi;
     info.indices[1] = 1; // is portal
     info.indices[2] = 0; // no texture for portals
+    info.indices[3] = (uint32_t)portalWarpInfos.size(); // portal warp index
 
-    // Portal warp data
-    // deltaInv is the traversal warp used by portalhit; delta is the reverse
-    // mapping back into this portal face and lets closesthit avoid per-pixel
-    // matrix inversion when pulling light positions into the current room.
-    memcpy(info.portalFrontWarp, p->front.deltaInv.m, 64);
-    memcpy(info.portalFrontReverse, p->front.delta.m, 64);
-    memcpy(info.portalBackWarp, p->back.deltaInv.m, 64);
-    memcpy(info.portalBackReverse, p->back.delta.m, 64);
+    // Portal warp data stored in separate buffer for cache efficiency
+    GPUPortalWarpInfo warpInfo = {};
+    memcpy(warpInfo.frontWarp, p->front.deltaInv.m, 64);
+    memcpy(warpInfo.frontReverse, p->front.delta.m, 64);
+    memcpy(warpInfo.backWarp, p->back.deltaInv.m, 64);
+    memcpy(warpInfo.backReverse, p->back.delta.m, 64);
+
+    // Precompute world-space portal geometry to avoid shader-side matrix multiplies
+    Vector3 portalCenter = m.MulPoint(Vector3(0, 0, 0));
+    Matrix4 nMat = p->WorldToLocal().Transposed();
+    Vector3 portalFwd = (nMat * Vector4(0, 0, -1, 0)).XYZ().Normalized();
+    Vector3 portalX = (m * Vector4(1, 0, 0, 0)).XYZ();
+    Vector3 portalY = (m * Vector4(0, 1, 0, 0)).XYZ();
+    warpInfo.center[0] = portalCenter.x; warpInfo.center[1] = portalCenter.y; warpInfo.center[2] = portalCenter.z;
+    warpInfo.forward[0] = portalFwd.x; warpInfo.forward[1] = portalFwd.y; warpInfo.forward[2] = portalFwd.z;
+    warpInfo.axisX[0] = portalX.x; warpInfo.axisX[1] = portalX.y; warpInfo.axisX[2] = portalX.z;
+    warpInfo.axisY[0] = portalY.x; warpInfo.axisY[1] = portalY.y; warpInfo.axisY[2] = portalY.z;
+
+    // AABB for portal influence zone: conservative box around portal center.
+    // At radius ~54 units the quadratic attenuation drops below 1%, so use 50.
+    const float influenceRadius = 50.0f;
+    warpInfo.aabbMin[0] = portalCenter.x - influenceRadius;
+    warpInfo.aabbMin[1] = portalCenter.y - influenceRadius;
+    warpInfo.aabbMin[2] = portalCenter.z - influenceRadius;
+    warpInfo.aabbMax[0] = portalCenter.x + influenceRadius;
+    warpInfo.aabbMax[1] = portalCenter.y + influenceRadius;
+    warpInfo.aabbMax[2] = portalCenter.z + influenceRadius;
+
+    portalWarpInfos.push_back(warpInfo);
+
+    // Track this portal's instance index for the portal index buffer
+    portalInstanceIndices.push_back((uint32_t)instanceInfos.size());
 
     TLASInstance ti2;
     ti2.transform = m;
@@ -935,6 +972,10 @@ void VulkanRenderer::UploadScene(const World& world) {
                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, meshOffBuffer, meshOffMem);
   uploadBuffer(instanceInfos.data(), instanceInfos.size() * sizeof(GPUInstanceInfo),
                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, instanceBuffer, instanceMem);
+  uploadBuffer(portalWarpInfos.data(), portalWarpInfos.size() * sizeof(GPUPortalWarpInfo),
+               VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, portalWarpBuffer, portalWarpMem);
+  uploadBuffer(portalInstanceIndices.data(), portalInstanceIndices.size() * sizeof(uint32_t),
+               VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, portalIndexBuffer, portalIndexMem);
 
   // Build BLAS per unique mesh
   for (size_t i = 0; i < meshGPUs.size(); i++) {
@@ -1097,7 +1138,7 @@ void VulkanRenderer::UploadScene(const World& world) {
       {VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1},
       {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1},
       {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-      {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5},
+      {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 7},
       {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, std::max(texCount, 1u)},
     };
     VkDescriptorPoolCreateInfo dpci = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
@@ -1148,6 +1189,12 @@ void VulkanRenderer::UpdateDescriptorSet() {
   ssbos[3] = {uvBuffer, 0, VK_WHOLE_SIZE};
   ssbos[4] = {meshOffBuffer, 0, VK_WHOLE_SIZE};
 
+  // Portal warp SSBO (binding 8)
+  VkDescriptorBufferInfo portalWarpInfo = {portalWarpBuffer, 0, VK_WHOLE_SIZE};
+
+  // Portal index SSBO (binding 9)
+  VkDescriptorBufferInfo portalIndexInfo = {portalIndexBuffer, 0, VK_WHOLE_SIZE};
+
   // Textures
   std::vector<VkDescriptorImageInfo> texInfos(texGPUs.size());
   for (size_t i = 0; i < texGPUs.size(); i++) {
@@ -1156,7 +1203,7 @@ void VulkanRenderer::UpdateDescriptorSet() {
     texInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   }
 
-  VkWriteDescriptorSet writes[9] = {};
+  VkWriteDescriptorSet writes[11] = {};
   for (auto& w : writes) w.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
   writes[0].dstSet = descSet; writes[0].dstBinding = 0;
@@ -1178,11 +1225,19 @@ void VulkanRenderer::UpdateDescriptorSet() {
   }
 
   writes[8].dstSet = descSet; writes[8].dstBinding = 8;
-  writes[8].descriptorCount = (uint32_t)texInfos.size();
-  writes[8].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  writes[8].pImageInfo = texInfos.data();
+  writes[8].descriptorCount = 1; writes[8].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  writes[8].pBufferInfo = &portalWarpInfo;
 
-  vkUpdateDescriptorSets(device, 9, writes, 0, nullptr);
+  writes[9].dstSet = descSet; writes[9].dstBinding = 9;
+  writes[9].descriptorCount = 1; writes[9].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  writes[9].pBufferInfo = &portalIndexInfo;
+
+  writes[10].dstSet = descSet; writes[10].dstBinding = 10;
+  writes[10].descriptorCount = (uint32_t)texInfos.size();
+  writes[10].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  writes[10].pImageInfo = texInfos.data();
+
+  vkUpdateDescriptorSets(device, 11, writes, 0, nullptr);
 }
 
 // ============================================================
@@ -1339,6 +1394,8 @@ void VulkanRenderer::DestroyScene() {
   destroyBuf(uvBuffer, uvMem);
   destroyBuf(meshOffBuffer, meshOffMem);
   destroyBuf(instanceBuffer, instanceMem);
+  destroyBuf(portalWarpBuffer, portalWarpMem);
+  destroyBuf(portalIndexBuffer, portalIndexMem);
 
   if (descPool) { vkDestroyDescriptorPool(device, descPool, nullptr); descPool = VK_NULL_HANDLE; }
   descSet = VK_NULL_HANDLE;
