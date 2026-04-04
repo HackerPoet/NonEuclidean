@@ -5,7 +5,11 @@
 #include <string>
 #include <cassert>
 
+Mesh::Mesh() : is3DTex(false) {
+}
+
 Mesh::Mesh(const char* fname) : is3DTex(false) {
+  sourceName = fname ? fname : "";
   //Open the file for reading
   std::ifstream fin(std::string("Meshes/") + fname);
   if (!fin) {
@@ -128,12 +132,43 @@ Mesh::Mesh(const char* fname) : is3DTex(false) {
   // CPU-only: no GL upload
 }
 
+Mesh::Mesh(const std::vector<float>& inVerts, const std::vector<float>& inUVs, bool inIs3DTex)
+  : verts(inVerts), uvs(inUVs), is3DTex(inIs3DTex) {
+  const size_t vertexCount = verts.size() / 3;
+  const size_t uvStride = is3DTex ? 3 : 2;
+
+  if (uvs.empty()) {
+    uvs.resize(vertexCount * uvStride, 0.0f);
+  }
+
+  assert(verts.size() % 9 == 0);
+  assert(uvs.size() == vertexCount * uvStride);
+  RebuildFlatNormals();
+}
+
 Mesh::~Mesh() {
+}
+
+void Mesh::RebuildFlatNormals() {
+  normals.clear();
+  normals.reserve(verts.size());
+
+  for (size_t i = 0; i + 8 < verts.size(); i += 9) {
+    const Vector3 v1(&verts[i]);
+    const Vector3 v2(&verts[i + 3]);
+    const Vector3 v3(&verts[i + 6]);
+    Vector3 normal = (v2 - v1).Cross(v3 - v1).NormalizedSafe();
+    for (int vertex = 0; vertex < 3; ++vertex) {
+      normals.push_back(normal.x);
+      normals.push_back(normal.y);
+      normals.push_back(normal.z);
+    }
+  }
 }
 
 void Mesh::AddFace(
   const std::vector<float>& vert_palette, const std::vector<float>& uv_palette,
-  uint32_t a, uint32_t at, uint32_t b, uint32_t bt, uint32_t c, uint32_t ct, bool is3DTex)
+  uint32_t a, uint32_t at, uint32_t b, uint32_t bt, uint32_t c, uint32_t ct, bool faceIs3DTex)
 {
   //Merge texture and vertex indicies
   assert(a > 0 && b > 0 && c > 0);
@@ -157,7 +192,7 @@ void Mesh::AddFace(
     verts.push_back(vert_palette[v * 3 + 1]);
     verts.push_back(vert_palette[v * 3 + 2]);
     if (!uv_palette.empty()) {
-      if (is3DTex) {
+      if (faceIs3DTex) {
         assert(vt < uv_palette.size() / 3);
         uvs.push_back(uv_palette[vt * 3]);
         uvs.push_back(uv_palette[vt * 3 + 1]);

@@ -2,10 +2,12 @@ set(SOURCES
     engine/Engine.cpp
     engine/Input.cpp
     engine/Main.cpp
+    engine/SceneFile.cpp
     engine/world.cpp
     render/Camera.cpp
     render/FrameBuffer.cpp
     render/Mesh.cpp
+    render/PortalMeshWarp.cpp
     render/Resources.cpp
     render/Shader.cpp
     render/Texture.cpp

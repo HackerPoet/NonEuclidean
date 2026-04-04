@@ -3,6 +3,7 @@
 #include "Vector.h"
 #include "Camera.h"
 #include "Sphere.h"
+#include <string>
 #include <vector>
 #include <memory>
 
@@ -41,7 +42,9 @@ public:
 
   bool visible;
   bool castShadow;
+  bool isMarker;
   Vector3 emissive;
+  std::string name;
 
   std::shared_ptr<Mesh> mesh;
   std::shared_ptr<Texture> texture;

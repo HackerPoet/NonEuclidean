@@ -11,6 +11,7 @@
 #include "world.h"
 #include "VulkanRenderer.h"
 #include <windows.h>
+#include <string>
 #include <memory>
 #include <vector>
 
@@ -22,6 +23,8 @@ public:
   int Run();
   void Update();
   void LoadScene(int ix);
+   bool LoadSceneFromFile(const char* filename);
+  bool SaveSceneToFile(const char* filename) const;
 
   LRESULT WindowProc(HWND hCurWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -37,6 +40,13 @@ private:
   void SetupInputs();
   void ConfineCursor();
   void ToggleFullscreen();
+  void BeginMarkerNaming();
+  void CommitMarkerNaming();
+  void CancelMarkerNaming();
+  void AddMarker(const std::string& name);
+  void UndoMarker();
+  void UpdateWindowTitle();
+  void UploadCurrentWorld();
 
   HWND  hWnd;
   HINSTANCE hInstance;
@@ -45,6 +55,9 @@ private:
   LONG iHeight;
   bool isFullscreen;
   bool cursorCaptured;
+  bool markerNamingActive;
+  bool markerNamingRestoreCapture;
+  std::string pendingMarkerName;
 
   Camera main_cam;
   Input input;

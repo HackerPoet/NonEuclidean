@@ -8,8 +8,13 @@
 #include "Level6.h"
 #include "Level7.h"
 #include "Level8.h"
+#include "Resources.h"
+#include "SceneFile.h"
+#include <cctype>
 #include <cmath>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <algorithm>
 
 Engine *GH_ENGINE = nullptr;
@@ -19,6 +24,74 @@ bool GH_CURSOR_CAPTURED = false;
 bool GH_LOCK_CAMERA = false;
 int GH_REC_LEVEL = 0;
 int64_t GH_FRAME = 0;
+
+static const char GH_QUICK_SCENE_FILE[] = "quick_save.scene";
+static const float GH_MARKER_DISTANCE = 10.0f;
+static const float GH_MARKER_SIZE = 1.0f;
+static const size_t GH_MARKER_NAME_LIMIT = 48;
+
+namespace {
+
+std::string TrimWhitespace(const std::string& value)
+{
+  size_t start = 0;
+  while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start])))
+  {
+    ++start;
+  }
+
+  size_t end = value.size();
+  while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1])))
+  {
+    --end;
+  }
+
+  return value.substr(start, end - start);
+}
+
+bool HasObjectName(const World& world, const std::string& name)
+{
+  for (size_t i = 0; i < world.objects.size(); ++i)
+  {
+    if (world.objects[i] && world.objects[i]->name == name)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string MakeUniqueObjectName(const World& world, const std::string& baseName)
+{
+  if (baseName.empty() || !HasObjectName(world, baseName))
+  {
+    return baseName;
+  }
+
+  for (int suffix = 2; ; ++suffix)
+  {
+    std::string candidate = baseName + "_" + std::to_string(suffix);
+    if (!HasObjectName(world, candidate))
+    {
+      return candidate;
+    }
+  }
+}
+
+std::string BuildAutoMarkerName(const World& world)
+{
+  for (int index = 1; ; ++index)
+  {
+    std::ostringstream name;
+    name << "marker_" << std::setfill('0') << std::setw(3) << index;
+    if (!HasObjectName(world, name.str()))
+    {
+      return name.str();
+    }
+  }
+}
+
+}
 
 static bool IsEnvFlagEnabled(const char* name)
 {
@@ -43,7 +116,7 @@ LRESULT WINAPI StaticWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
   return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-Engine::Engine() : hWnd(NULL)
+Engine::Engine() : hWnd(NULL), markerNamingActive(false), markerNamingRestoreCapture(false)
 {
   GH_ENGINE = this;
   GH_INPUT = &input;
@@ -117,45 +190,64 @@ int Engine::Run()
     {
       ConfineCursor();
 
-      if (input.key_press['1'])
+      if (!markerNamingActive)
       {
-        LoadScene(0);
-      }
-      else if (input.key_press['2'])
-      {
-        LoadScene(1);
-      }
-      else if (input.key_press['3'])
-      {
-        LoadScene(2);
-      }
-      else if (input.key_press['4'])
-      {
-        LoadScene(3);
-      }
-      else if (input.key_press['5'])
-      {
-        LoadScene(4);
-      }
-      else if (input.key_press['6'])
-      {
-        LoadScene(5);
-      }
-      else if (input.key_press['7'])
-      {
-        LoadScene(6);
-      }
-      else if (input.key_press['8'])
-      {
-        LoadScene(7);
-      }
-      else if (input.key_press['9'])
-      {
-        LoadScene(8);
-      }
-      else if (input.key_press['R'])
-      {
-        renderer.ReloadShaders();
+        if (input.key_press['1'])
+        {
+          LoadScene(0);
+        }
+        else if (input.key_press['2'])
+        {
+          LoadScene(1);
+        }
+        else if (input.key_press['3'])
+        {
+          LoadScene(2);
+        }
+        else if (input.key_press['4'])
+        {
+          LoadScene(3);
+        }
+        else if (input.key_press['5'])
+        {
+          LoadScene(4);
+        }
+        else if (input.key_press['6'])
+        {
+          LoadScene(5);
+        }
+        else if (input.key_press['7'])
+        {
+          LoadScene(6);
+        }
+        else if (input.key_press['8'])
+        {
+          LoadScene(7);
+        }
+        else if (input.key_press['9'])
+        {
+          LoadScene(8);
+        }
+        else if (input.key_press['R'])
+        {
+          renderer.ReloadShaders();
+        }
+        else if (input.key_press[VK_F5])
+        {
+          SaveSceneToFile(GH_QUICK_SCENE_FILE);
+        }
+        else if (input.key_press[VK_F9])
+        {
+          LoadSceneFromFile(GH_QUICK_SCENE_FILE);
+        }
+        else if (input.key_press['M'])
+        {
+          BeginMarkerNaming();
+        }
+        else if (input.key_press['U'] || (input.key[VK_CONTROL] && input.key_press['Z']))
+        {
+          UndoMarker();
+        }
       }
 
     const int64_t new_ticks = timer.GetTicks();
@@ -188,6 +280,8 @@ return 0;
 
 void Engine::LoadScene(int ix)
 {
+  CancelMarkerNaming();
+
   // Clear out old scene
   if (curScene)
   {
@@ -202,6 +296,177 @@ void Engine::LoadScene(int ix)
   curWorld.objects.push_back(player);
 
   // Upload scene to Vulkan RT
+  UploadCurrentWorld();
+}
+
+bool Engine::SaveSceneToFile(const char* filename) const {
+  return SaveSceneFile(filename, curWorld, player.get());
+}
+
+bool Engine::LoadSceneFromFile(const char* filename) {
+  CancelMarkerNaming();
+
+  World loadedWorld;
+  Player loadedPlayer;
+  if (!LoadSceneFile(filename, loadedWorld, &loadedPlayer)) {
+    return false;
+  }
+
+  if (curScene)
+  {
+    curScene->Unload();
+  }
+  curScene.reset();
+  curWorld = loadedWorld;
+  *player = loadedPlayer;
+
+  UploadCurrentWorld();
+  return true;
+}
+
+void Engine::BeginMarkerNaming()
+{
+  if (markerNamingActive)
+  {
+    return;
+  }
+
+  markerNamingActive = true;
+  pendingMarkerName.clear();
+  markerNamingRestoreCapture = cursorCaptured;
+
+  memset(input.key, 0, sizeof(input.key));
+  memset(input.key_press, 0, sizeof(input.key_press));
+
+  if (cursorCaptured)
+  {
+    cursorCaptured = false;
+    GH_CURSOR_CAPTURED = false;
+    if (GH_HIDE_MOUSE)
+    {
+      ShowCursor(TRUE);
+    }
+    ClipCursor(NULL);
+  }
+
+  UpdateWindowTitle();
+}
+
+void Engine::CommitMarkerNaming()
+{
+  if (!markerNamingActive)
+  {
+    return;
+  }
+
+  std::string markerName = TrimWhitespace(pendingMarkerName);
+  if (markerName.empty())
+  {
+    markerName = BuildAutoMarkerName(curWorld);
+  }
+  else
+  {
+    markerName = MakeUniqueObjectName(curWorld, markerName);
+  }
+
+  CancelMarkerNaming();
+  AddMarker(markerName);
+}
+
+void Engine::CancelMarkerNaming()
+{
+  if (!markerNamingActive)
+  {
+    return;
+  }
+
+  markerNamingActive = false;
+  pendingMarkerName.clear();
+  memset(input.key, 0, sizeof(input.key));
+  memset(input.key_press, 0, sizeof(input.key_press));
+
+  cursorCaptured = markerNamingRestoreCapture;
+  GH_CURSOR_CAPTURED = cursorCaptured;
+  if (markerNamingRestoreCapture && GH_HIDE_MOUSE)
+  {
+    ShowCursor(FALSE);
+  }
+  markerNamingRestoreCapture = false;
+
+  UpdateWindowTitle();
+}
+
+void Engine::AddMarker(const std::string& name)
+{
+  if (name.empty())
+  {
+    return;
+  }
+
+  std::shared_ptr<Object> marker(new Object());
+  marker->mesh = AquireMesh("cube.obj");
+  marker->shader = AquireShader("texture");
+  marker->texture = AquireTexture("white.bmp");
+  marker->scale = Vector3(GH_MARKER_SIZE * player->p_scale);
+  marker->name = name;
+  marker->isMarker = true;
+
+  Vector3 forward = player->CamToWorld().MulDirection(Vector3(0.0f, 0.0f, -1.0f));
+  forward.y = 0.0f;
+  if (forward.MagSq() < 1e-6f)
+  {
+    forward = Vector3(0.0f, 0.0f, -1.0f);
+  }
+  else
+  {
+    forward.Normalize();
+  }
+
+  const float markerGroundY = player->pos.y - GH_PLAYER_HEIGHT * player->p_scale;
+  marker->pos = player->pos + forward * (GH_MARKER_DISTANCE * player->p_scale);
+  marker->pos.y = markerGroundY + marker->scale.y * 0.5f;
+
+  curWorld.objects.push_back(marker);
+  UploadCurrentWorld();
+}
+
+void Engine::UndoMarker()
+{
+  for (PObjectVec::reverse_iterator it = curWorld.objects.rbegin(); it != curWorld.objects.rend(); ++it)
+  {
+    if (*it && (*it)->isMarker)
+    {
+      curWorld.objects.erase((it + 1).base());
+      UploadCurrentWorld();
+      return;
+    }
+  }
+}
+
+void Engine::UpdateWindowTitle()
+{
+  std::string title = GH_TITLE;
+  if (markerNamingActive)
+  {
+    title += " - Marker name: ";
+    title += (pendingMarkerName.empty() ? "<auto>" : pendingMarkerName);
+    title += " [Enter place, Esc cancel, Backspace edit]";
+  }
+  SetWindowTextA(hWnd, title.c_str());
+}
+
+void Engine::UploadCurrentWorld() {
+  curWorld.materializePortalMarkers();
+  bool hasPlayer = false;
+  for (size_t i = 0; i < curWorld.objects.size(); ++i) {
+    if (curWorld.objects[i].get() == player.get()) {
+      hasPlayer = true;
+      break;
+    }
+  }
+  if (!hasPlayer) {
+    curWorld.objects.push_back(player);
+  }
   renderer.UploadScene(curWorld);
 }
 
@@ -318,6 +583,28 @@ LRESULT Engine::WindowProc(HWND hCurWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
     {
       return 0;
     }
+
+    if (markerNamingActive)
+    {
+      if (wParam == VK_ESCAPE)
+      {
+        CancelMarkerNaming();
+      }
+      else if (wParam == VK_RETURN)
+      {
+        CommitMarkerNaming();
+      }
+      else if (wParam == VK_BACK)
+      {
+        if (!pendingMarkerName.empty())
+        {
+          pendingMarkerName.pop_back();
+          UpdateWindowTitle();
+        }
+      }
+      return 0;
+    }
+
     input.key[wParam & 0xFF] = true;
     input.key_press[wParam & 0xFF] = true;
     if (wParam == VK_ESCAPE)
@@ -345,8 +632,24 @@ LRESULT Engine::WindowProc(HWND hCurWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
     break;
 
   case WM_KEYUP:
+    if (markerNamingActive)
+    {
+      return 0;
+    }
     input.key[wParam & 0xFF] = false;
     return 0;
+
+  case WM_CHAR:
+    if (markerNamingActive)
+    {
+      if (wParam >= 32 && wParam <= 126 && pendingMarkerName.size() < GH_MARKER_NAME_LIMIT)
+      {
+        pendingMarkerName.push_back(static_cast<char>(wParam));
+        UpdateWindowTitle();
+      }
+      return 0;
+    }
+    break;
 
   case WM_INPUT:
     dwSize = sizeof(lpb);

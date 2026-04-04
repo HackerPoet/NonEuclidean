@@ -57,6 +57,14 @@ void Player::Update() {
       moveL -= 1.0f;
     }
     Move(moveF, moveL);
+
+    if (GH_INPUT->key_press[VK_SPACE]) {
+      const Matrix4 camToWorld = LocalToWorld() * Matrix4::RotY(cam_ry);
+      Vector3 dashDir = camToWorld.MulDirection(Vector3(0.0f, 0.0f, -1.0f));
+      dashDir.y = 0.0f;
+      dashDir.NormalizeSafe();
+      pos += dashDir * (GH_DASH_DISTANCE * p_scale);
+    }
   }
 
 #if 0
@@ -88,6 +96,19 @@ void Player::Look(float mouseDx, float mouseDy) {
   }
 }
 
+void Player::SetLookAngles(float rx, float ry) {
+  cam_rx = rx;
+  cam_ry = ry;
+}
+
+float Player::LookPitch() const {
+  return cam_rx;
+}
+
+float Player::LookYaw() const {
+  return cam_ry;
+}
+
 void Player::Move(float moveF, float moveL) {
   //Make sure movement is not too fast
   const float mag = std::sqrt(moveF*moveF + moveL*moveL);
@@ -96,14 +117,16 @@ void Player::Move(float moveF, float moveL) {
     moveL /= mag;
   }
 
+  const float speedMult = GH_INPUT->key[VK_SHIFT] ? GH_SPRINT_MULT : 1.0f;
+
   //Movement
   const Matrix4 camToWorld = LocalToWorld() * Matrix4::RotY(cam_ry);
-  velocity += camToWorld.MulDirection(Vector3(-moveL, 0, -moveF)) * (GH_WALK_ACCEL * GH_DT);
+  velocity += camToWorld.MulDirection(Vector3(-moveL, 0, -moveF)) * (GH_WALK_ACCEL * speedMult * GH_DT);
 
   //Don't allow non-falling speeds above the player's max speed
   const float tempY = velocity.y;
   velocity.y = 0.0f;
-  velocity.ClipMag(p_scale * GH_WALK_SPEED);
+  velocity.ClipMag(p_scale * GH_WALK_SPEED * speedMult);
   velocity.y = tempY;
 }
 

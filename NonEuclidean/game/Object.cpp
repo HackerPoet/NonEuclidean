@@ -11,6 +11,7 @@ Object::Object() :
   p_scale(1.0f),
   visible(true),
   castShadow(true),
+  isMarker(false),
   emissive(0.0f) {
 }
 
@@ -19,6 +20,11 @@ void Object::Reset() {
   euler.SetZero();
   scale.SetOnes();
   p_scale = 1.0f;
+  visible = true;
+  castShadow = true;
+  isMarker = false;
+  emissive.SetZero();
+  name.clear();
 }
 
 void Object::Draw(const Camera& cam, uint32_t curFBO) {

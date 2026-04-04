@@ -1,6 +1,6 @@
 #include "Level2.h"
-#include "DeadTree.h"
 #include "Object.h"
+#include "PortalFrameTrees.h"
 #include "Resources.h"
 #include "Sky.h"
 #include <cmath>
@@ -14,25 +14,6 @@ std::shared_ptr<Portal> CreatePortal(World& world, const Vector3& pos, float yaw
   portal->scale = scale;
   world.portals.push_back(portal);
   return portal;
-}
-
-void AddPortalFrameTrees(World& world, const Vector3& portalPos, float portalYaw, float portalHalfWidth, float treeScale, bool rotateFirstTreeLeft = false) {
-  const Vector3 right(std::cos(portalYaw), 0.0f, std::sin(portalYaw));
-  const Vector3 forward(-std::sin(portalYaw), 0.0f, -std::cos(portalYaw));
-  const float directions[2] = {-1.0f, 1.0f};
-  const float treeOffset = portalHalfWidth + 2.1f;
-  const float leftYawOffset = 10.0f * GH_PI / 180.0f;
-  const float rightYawOffset = -160.0f * GH_PI / 180.0f;
-
-  for (int treeIndex = 0; treeIndex < 2; ++treeIndex) {
-    float direction = directions[treeIndex];
-    std::shared_ptr<DeadTree> tree(new DeadTree());
-    tree->scale = Vector3(treeScale, treeScale, treeScale);
-    tree->pos = portalPos + right * (treeOffset * direction) - forward * 0.35f;
-    tree->pos.y = 0.0f;
-    tree->euler.y = portalYaw + (treeIndex == 0 ? leftYawOffset : rightYawOffset);
-    world.objects.push_back(tree);
-  }
 }
 
 std::shared_ptr<Object> CreateLightCube(const Vector3& pos, const Vector3& color) {
@@ -50,10 +31,7 @@ std::shared_ptr<Object> CreateLightCube(const Vector3& pos, const Vector3& color
 
 void Level2::Load(World& world, Player& player) {
   const bool wideLayout = true;
-  const float portalDistance = wideLayout ? 16.0f : 12.0f;
-  const float portalHalfWidth = wideLayout ? 6.3f : 2.0f;
-  const float portalHalfHeight = wideLayout ? 8.5f : 6.6f;
-  const float treeScale = wideLayout ? 3.6f : 3.2f;
+  const PortalFrameLayoutSettings frameLayout = GetLevel2PortalFrameLayoutSettings(wideLayout);
 
   world.ambientScale = 0.7f;
   world.sky = std::make_shared<Sky>("sky");
@@ -71,20 +49,20 @@ void Level2::Load(World& world, Player& player) {
   world.lightColor = lightCube->emissive;
 
   std::shared_ptr<Object> accentLightCube = CreateLightCube(
-      Vector3(-(portalHalfWidth + 4.0f), portalHalfHeight * 0.65f, -portalDistance * 0.35f),
+      Vector3(-(frameLayout.portalHalfWidth + 4.0f), frameLayout.portalHalfHeight * 0.65f, -frameLayout.portalDistance * 0.35f),
       Vector3(2.6f, 3.0f, 4.4f));
   world.objects.push_back(accentLightCube);
   world.lightPos2 = accentLightCube->pos;
   world.lightColor2 = accentLightCube->emissive;
 
-  const Vector3 portalScale(portalHalfWidth, portalHalfHeight, 1.0f);
+  const Vector3 portalScale(frameLayout.portalHalfWidth, frameLayout.portalHalfHeight, 1.0f);
 
   // Keep the portals facing each other so Level 2 works as a simple portal test range.
-  std::shared_ptr<Portal> portalA = CreatePortal(world, Vector3(0.0f, portalHalfHeight, -portalDistance), 0.0f, portalScale);
-  std::shared_ptr<Portal> portalB = CreatePortal(world, Vector3(0.0f, portalHalfHeight, portalDistance), 0.0f, portalScale);
+  std::shared_ptr<Portal> portalA = CreatePortal(world, Vector3(0.0f, frameLayout.portalHalfHeight, -frameLayout.portalDistance), 0.0f, portalScale);
+  std::shared_ptr<Portal> portalB = CreatePortal(world, Vector3(0.0f, frameLayout.portalHalfHeight, frameLayout.portalDistance), 0.0f, portalScale);
 
-  AddPortalFrameTrees(world, portalA->pos, portalA->euler.y, portalHalfWidth, treeScale);
-  AddPortalFrameTrees(world, portalB->pos, portalB->euler.y, portalHalfWidth, treeScale);
+  AddPortalFrameTrees(world, portalA->pos, portalA->euler.y, frameLayout.portalHalfWidth, frameLayout.treeScale);
+  AddPortalFrameTrees(world, portalB->pos, portalB->euler.y, frameLayout.portalHalfWidth, frameLayout.treeScale);
 
   Portal::Connect(portalA, portalB);
 

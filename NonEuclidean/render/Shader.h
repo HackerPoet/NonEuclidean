@@ -3,7 +3,7 @@
 
 class Shader {
 public:
-  Shader(const char* /*name*/) {}
+  Shader(const char* name) : sourceName(name ? name : "") {}
   ~Shader() {}
 
   void Use() {}
@@ -12,4 +12,6 @@ public:
   void SetUniform(const char*, float, float, float) {}
   void SetUniformMat4(const char*, const float*) {}
   void SetUniformInt(const char*, int) {}
+
+  std::string sourceName;
 };

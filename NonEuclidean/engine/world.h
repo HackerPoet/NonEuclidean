@@ -20,4 +20,7 @@ struct World {
   float time_of_day = 3000.0f; // 0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset
 
   void Clear();
+  void materializePortalMarkers();
+  bool importScene(const char* filename);
+  bool exportScene(const char* filename) const;
 };

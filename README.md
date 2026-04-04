@@ -8,10 +8,13 @@ Add glew-2.1.0 to the main directory
 
 ## Controls
 * **Mouse** - Look around
-* **AWSD** - Movement
-* **1 - 7** - Switch between different demo rooms
+* **WASD** - Movement
+* **M** - Start naming a marker cube, then press **Enter** to place it
+* Marker names using **Portal <name> A** and **Portal <name> B** become connected tree-frame portals
+* **U** or **Ctrl + Z** - Undo the last marker cube
+* **1 - 9** - Switch between different demo rooms
 * **Alt + Enter** - Toggle Fullscreen
-* **Esc** - Exit demo
+* **Esc** - Cancel marker naming or exit demo
 
 
 ## Credits

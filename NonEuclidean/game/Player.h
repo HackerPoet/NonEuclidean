@@ -13,6 +13,9 @@ public:
 
   void Look(float mouseDx, float mouseDy);
   void Move(float moveF, float moveL);
+  void SetLookAngles(float rx, float ry);
+  float LookPitch() const;
+  float LookYaw() const;
 
   Matrix4 WorldToCam() const;
   Matrix4 CamToWorld() const;

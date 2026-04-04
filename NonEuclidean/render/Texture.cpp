@@ -4,6 +4,9 @@
 
 Texture::Texture(const char* fname, int rows, int cols) {
   assert(rows >= 1 && cols >= 1);
+  sourceName = fname ? fname : "";
+  this->rows = rows;
+  this->cols = cols;
   is3D = (rows > 1 || cols > 1);
 
   std::ifstream fin(std::string("Textures/") + fname, std::ios::in | std::ios::binary);
