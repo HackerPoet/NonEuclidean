@@ -1,6 +1,7 @@
 #include "Texture.h"
 #include <fstream>
 #include <cassert>
+#include <cstring>
 
 Texture::Texture(const char* fname, int rows, int cols) {
   assert(rows >= 1 && cols >= 1);
@@ -36,4 +37,12 @@ Texture::Texture(const char* fname, int rows, int cols) {
       fin.read(junk, 4 - padding);
     }
   }
+}
+
+Texture::Texture(int w, int h, const uint8_t* rgbaData) {
+  width = w;
+  height = h;
+  isRGBA = true;
+  pixels.resize(w * h * 4);
+  memcpy(pixels.data(), rgbaData, w * h * 4);
 }

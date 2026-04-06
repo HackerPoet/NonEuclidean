@@ -17,11 +17,8 @@ layout(location = 0) rayPayloadInEXT vec4 payload;
 layout(std140, binding = 2, set = 0) uniform UBO {
     layout(row_major) mat4 viewInv;
     layout(row_major) mat4 projInv;
-    vec4 lightPos;
-    vec4 lightColor;
-    vec4 lightPos2;
-    vec4 lightColor2;
     vec4 camPos;       // w = time_of_day
+    vec4 params;       // x = ambientScale, y = lightCount
 };
 
 #define PI 3.141592653589793
@@ -49,8 +46,8 @@ void main() {
     float h = max(0.0, n.y);
     vec3 day_top      = vec3(0.10, 0.38, 0.90);
     vec3 day_bot      = vec3(0.45, 0.68, 1.00);
-    vec3 night_sky    = vec3(0.05, 0.01, 0.01);
-    vec3 twilight_col = vec3(0.90, 0.35, 0.10);
+    vec3 night_sky    = vec3(0.005, 0.00, 0.001);
+    vec3 twilight_col = vec3(0.7, 0.35, 0.10);
 
     vec3 day_sky = mix(day_bot, day_top, h);
     // Add a warm twilight band near the horizon during sunrise/sunset

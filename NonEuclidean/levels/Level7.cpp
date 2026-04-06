@@ -27,8 +27,7 @@ void Level7::Load(World& world, Player& player) {
   cube->emissive = Vector3(4.0f, 3.8f, 3.2f);
   world.objects.push_back(cube);
 
-  world.lightPos   = cube->pos;
-  world.lightColor = Vector3(4.0f, 3.8f, 3.2f);
+  world.lights.push_back({cube->pos, Vector3(4.0f, 3.8f, 3.2f), 0.0f});
   // world.lightCookie = AquireTexture("proto_dark_01.bmp");
 
   // Door frame near the cube, looking at it

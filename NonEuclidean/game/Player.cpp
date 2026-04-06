@@ -58,7 +58,7 @@ void Player::Update() {
     }
     Move(moveF, moveL);
 
-    if (GH_INPUT->key_press[VK_SPACE]) {
+    if (GH_INPUT->key_press['X']) {
       const Matrix4 camToWorld = LocalToWorld() * Matrix4::RotY(cam_ry);
       Vector3 dashDir = camToWorld.MulDirection(Vector3(0.0f, 0.0f, -1.0f));
       dashDir.y = 0.0f;
@@ -67,12 +67,10 @@ void Player::Update() {
     }
   }
 
-#if 0
   //Jumping
   if (onGround && GH_INPUT->key[VK_SPACE]) {
     velocity.y += 2.0f * p_scale;
   }
-#endif
 
   //Reset ground state after update finishes
   onGround = false;

@@ -123,10 +123,29 @@ private:
   VkBuffer posBuffer = VK_NULL_HANDLE; VkDeviceMemory posMem = VK_NULL_HANDLE;
   VkBuffer nrmBuffer = VK_NULL_HANDLE; VkDeviceMemory nrmMem = VK_NULL_HANDLE;
   VkBuffer uvBuffer = VK_NULL_HANDLE;  VkDeviceMemory uvMem = VK_NULL_HANDLE;
+  VkBuffer colBuffer = VK_NULL_HANDLE; VkDeviceMemory colMem = VK_NULL_HANDLE;
+  VkBuffer texIdxBuffer = VK_NULL_HANDLE; VkDeviceMemory texIdxMem = VK_NULL_HANDLE;
   VkBuffer meshOffBuffer = VK_NULL_HANDLE; VkDeviceMemory meshOffMem = VK_NULL_HANDLE;
   VkBuffer instanceBuffer = VK_NULL_HANDLE; VkDeviceMemory instanceMem = VK_NULL_HANDLE;
   VkBuffer portalWarpBuffer = VK_NULL_HANDLE; VkDeviceMemory portalWarpMem = VK_NULL_HANDLE;
   VkBuffer portalIndexBuffer = VK_NULL_HANDLE; VkDeviceMemory portalIndexMem = VK_NULL_HANDLE;
+
+  // Light SSBO (binding 13)
+  VkBuffer lightBuffer = VK_NULL_HANDLE; VkDeviceMemory lightMem = VK_NULL_HANDLE;
+  void* lightMapped = nullptr;
+
+  // HUD overlay image (blitted onto swapchain each frame)
+  VkImage overlayImage = VK_NULL_HANDLE;
+  VkDeviceMemory overlayMem = VK_NULL_HANDLE;
+  VkImageView overlayView = VK_NULL_HANDLE;
+  uint32_t overlayWidth = 0, overlayHeight = 0;
+
+  // Overlay composite compute pipeline
+  VkDescriptorSetLayout overlayDescLayout = VK_NULL_HANDLE;
+  VkPipelineLayout overlayPipeLayout = VK_NULL_HANDLE;
+  VkPipeline overlayPipeline = VK_NULL_HANDLE;
+  VkDescriptorPool overlayDescPool = VK_NULL_HANDLE;
+  VkDescriptorSet overlayDescSet = VK_NULL_HANDLE;
 
   struct TexGPU {
     VkImage image = VK_NULL_HANDLE;

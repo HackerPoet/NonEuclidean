@@ -4,12 +4,302 @@
 #include <sstream>
 #include <string>
 #include <cassert>
+#include <unordered_map>
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
+#include "stb_image.h"
 
 Mesh::Mesh() : is3DTex(false) {
 }
 
 Mesh::Mesh(const char* fname) : is3DTex(false) {
   sourceName = fname ? fname : "";
+  std::string nameStr(sourceName);
+  bool isObj = (nameStr.size() >= 4 &&
+                nameStr.compare(nameStr.size() - 4, 4, ".obj") == 0);
+
+  if (!isObj) {
+    // Use Assimp for non-obj formats (GLB, FBX, etc.)
+    std::string fullPath = std::string("Meshes/") + sourceName;
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(fullPath,
+      aiProcess_Triangulate | aiProcess_FlipUVs |
+      aiProcess_JoinIdenticalVertices);
+    // Note: aiProcess_PreTransformVertices is NOT used — we walk the node tree
+    // manually so we can detect portal nodes by their Blender object name.
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+      return;
+    }
+
+    // Extract embedded textures from materials
+    std::unordered_map<unsigned int, uint32_t> materialToTexIdx;
+    for (unsigned int mi = 0; mi < scene->mNumMaterials; ++mi) {
+      aiMaterial* mat = scene->mMaterials[mi];
+      aiString texPath;
+      bool found = (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS);
+      if (!found) {
+        found = (mat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS);
+      }
+      if (!found) continue;
+
+      const aiTexture* aiTex = scene->GetEmbeddedTexture(texPath.C_Str());
+      if (!aiTex) continue;
+
+      std::shared_ptr<Texture> tex;
+      if (aiTex->mHeight == 0) {
+        int w, h, channels;
+        unsigned char* data = stbi_load_from_memory(
+          reinterpret_cast<const unsigned char*>(aiTex->pcData),
+          aiTex->mWidth, &w, &h, &channels, 4);
+        if (data) {
+          tex = std::make_shared<Texture>(w, h, data);
+          stbi_image_free(data);
+        }
+      } else {
+        int w = aiTex->mWidth, h = aiTex->mHeight;
+        std::vector<uint8_t> rgba(w * h * 4);
+        for (int pi = 0; pi < w * h; pi++) {
+          rgba[pi * 4 + 0] = aiTex->pcData[pi].r;
+          rgba[pi * 4 + 1] = aiTex->pcData[pi].g;
+          rgba[pi * 4 + 2] = aiTex->pcData[pi].b;
+          rgba[pi * 4 + 3] = aiTex->pcData[pi].a;
+        }
+        tex = std::make_shared<Texture>(w, h, rgba.data());
+      }
+      if (tex) {
+        materialToTexIdx[mi] = (uint32_t)embeddedTextures.size();
+        embeddedTextures.push_back(tex);
+      }
+    }
+
+    // Walk the node tree iteratively, applying transforms manually.
+    // Nodes named "Portal {id}" become portal markers; their geometry is excluded.
+    struct NodeEntry {
+      const aiNode* node;
+      Matrix4 worldTransform;
+    };
+    auto aiToMat4 = [](const aiMatrix4x4& ai) -> Matrix4 {
+      Matrix4 m;
+      const float* p = &ai.a1;
+      for (int i = 0; i < 16; i++)
+        m.m[i] = p[i];
+      return m;
+    };
+
+    std::vector<NodeEntry> nodeStack;
+    {
+      NodeEntry rootEntry = {scene->mRootNode, aiToMat4(scene->mRootNode->mTransformation)};
+      nodeStack.push_back(rootEntry);
+    }
+
+    while (!nodeStack.empty()) {
+      NodeEntry entry = nodeStack.back();
+      nodeStack.pop_back();
+      const aiNode* node = entry.node;
+      const Matrix4& world = entry.worldTransform;
+
+      // Push children with accumulated transforms
+      for (unsigned int ci = 0; ci < node->mNumChildren; ci++) {
+        const aiNode* child = node->mChildren[ci];
+        NodeEntry childEntry = {child, world * aiToMat4(child->mTransformation)};
+        nodeStack.push_back(childEntry);
+      }
+
+      // Check if this node is a portal marker
+      std::string nodeName(node->mName.C_Str());
+      if (nodeName.compare(0, 7, "Portal ") == 0 && node->mNumMeshes > 0) {
+        std::string idPart = nodeName.substr(7);
+        std::string::size_type dotPos = idPart.find('.');
+        if (dotPos != std::string::npos) idPart = idPart.substr(0, dotPos);
+        int portalId = 0;
+        try { portalId = std::stoi(idPart); } catch (...) { continue; }
+
+        // Gather all world-space triangle vertices from this node's meshes
+        PortalMarker pm;
+        pm.id = portalId;
+        for (unsigned int mi = 0; mi < node->mNumMeshes; mi++) {
+          aiMesh* pmesh = scene->mMeshes[node->mMeshes[mi]];
+          for (unsigned int fi = 0; fi < pmesh->mNumFaces; ++fi) {
+            aiFace& face = pmesh->mFaces[fi];
+            if (face.mNumIndices != 3) continue;
+            for (unsigned int ki = 0; ki < 3; ++ki) {
+              unsigned int idx = face.mIndices[ki];
+              Vector3 lp(pmesh->mVertices[idx].x, pmesh->mVertices[idx].y, pmesh->mVertices[idx].z);
+              pm.wsVerts.push_back(world.MulPoint(lp));
+            }
+          }
+        }
+        if (pm.wsVerts.size() < 3) continue;
+
+        // Centroid
+        Vector3 center(0, 0, 0);
+        for (size_t vi = 0; vi < pm.wsVerts.size(); ++vi) center = center + pm.wsVerts[vi];
+        pm.center = center * (1.0f / (float)pm.wsVerts.size());
+
+        // Normal from first triangle
+        Vector3 edge1 = pm.wsVerts[1] - pm.wsVerts[0];
+        Vector3 edge2 = pm.wsVerts[2] - pm.wsVerts[0];
+        pm.forward = edge1.Cross(edge2).Normalized();
+
+        portalMarkers.push_back(pm);
+        continue; // skip portal geometry
+      }
+
+      // Check if this node is a light marker (name starts with "light", case-insensitive)
+      bool isLightNode = false;
+      {
+        std::string lower = nodeName;
+        for (size_t ci = 0; ci < lower.size(); ++ci) lower[ci] = (char)tolower(lower[ci]);
+        isLightNode = (lower.compare(0, 5, "light") == 0) && node->mNumMeshes > 0;
+      }
+
+      // Choose target arrays: light nodes go into a separate mesh,
+      // everything else goes into the main arrays.
+      std::vector<float>* dstVerts   = &verts;
+      std::vector<float>* dstUvs     = &uvs;
+      std::vector<float>* dstNormals = &normals;
+      std::vector<float>* dstColors  = &colors;
+      std::vector<uint32_t>* dstTexIndices = &texIndices;
+
+      std::shared_ptr<Mesh> lightMesh;
+      if (isLightNode) {
+        lightMesh.reset(new Mesh());
+        lightMesh->is3DTex = false;
+        dstVerts      = &lightMesh->verts;
+        dstUvs        = &lightMesh->uvs;
+        dstNormals    = &lightMesh->normals;
+        dstColors     = &lightMesh->colors;
+        dstTexIndices = &lightMesh->texIndices;
+      }
+
+      size_t nodeVertStart = verts.size() / 3;
+      for (unsigned int mi = 0; mi < node->mNumMeshes; mi++) {
+        aiMesh* mesh = scene->mMeshes[node->mMeshes[mi]];
+
+        if (mesh->mTextureCoords[0] && mesh->mNumUVComponents[0] == 3) {
+          is3DTex = true;
+          if (lightMesh) lightMesh->is3DTex = true;
+        }
+
+        float matR = 1.0f, matG = 1.0f, matB = 1.0f;
+        if (scene->mNumMaterials > mesh->mMaterialIndex) {
+          aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
+          aiColor4D diffuse;
+          if (mat->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) == AI_SUCCESS) {
+            matR = diffuse.r; matG = diffuse.g; matB = diffuse.b;
+          }
+          aiColor4D baseColor;
+          if (mat->Get(AI_MATKEY_BASE_COLOR, baseColor) == AI_SUCCESS) {
+            matR = baseColor.r; matG = baseColor.g; matB = baseColor.b;
+          }
+        }
+
+        uint32_t subMeshTexIdx = UINT32_MAX;
+        {
+          auto texIt = materialToTexIdx.find(mesh->mMaterialIndex);
+          if (texIt != materialToTexIdx.end()) {
+            subMeshTexIdx = texIt->second;
+          }
+        }
+
+        for (unsigned int j = 0; j < mesh->mNumFaces; ++j) {
+          aiFace face = mesh->mFaces[j];
+          if (face.mNumIndices != 3) continue;
+
+          for (unsigned int k = 0; k < 3; ++k) {
+            unsigned int idx = face.mIndices[k];
+
+            // Transform position to world space via node transform
+            Vector3 lp(mesh->mVertices[idx].x, mesh->mVertices[idx].y, mesh->mVertices[idx].z);
+            Vector3 wp = world.MulPoint(lp);
+            dstVerts->push_back(wp.x);
+            dstVerts->push_back(wp.y);
+            dstVerts->push_back(wp.z);
+
+            if (mesh->mTextureCoords[0]) {
+              dstUvs->push_back(mesh->mTextureCoords[0][idx].x);
+              dstUvs->push_back(mesh->mTextureCoords[0][idx].y);
+              if (is3DTex) {
+                dstUvs->push_back(mesh->mTextureCoords[0][idx].z);
+              }
+            } else {
+              dstUvs->push_back(0.0f);
+              dstUvs->push_back(0.0f);
+              if (is3DTex) {
+                dstUvs->push_back(0.0f);
+              }
+            }
+
+            if (mesh->HasNormals()) {
+              Vector3 ln(mesh->mNormals[idx].x, mesh->mNormals[idx].y, mesh->mNormals[idx].z);
+              Vector3 wn = world.MulDirection(ln).NormalizedSafe();
+              dstNormals->push_back(wn.x);
+              dstNormals->push_back(wn.y);
+              dstNormals->push_back(wn.z);
+            } else {
+              dstNormals->push_back(0.0f);
+              dstNormals->push_back(1.0f);
+              dstNormals->push_back(0.0f);
+            }
+
+            if (mesh->HasVertexColors(0)) {
+              dstColors->push_back(mesh->mColors[0][idx].r);
+              dstColors->push_back(mesh->mColors[0][idx].g);
+              dstColors->push_back(mesh->mColors[0][idx].b);
+            } else {
+              dstColors->push_back(matR);
+              dstColors->push_back(matG);
+              dstColors->push_back(matB);
+            }
+
+            dstTexIndices->push_back(subMeshTexIdx);
+          }
+        }
+      }
+
+      if (isLightNode && lightMesh && !lightMesh->verts.empty()) {
+        // Build LightMarker from the separated mesh data
+        LightMarker lm;
+        lm.name = nodeName;
+        lm.mesh = lightMesh;
+        size_t numVerts = lightMesh->verts.size() / 3;
+        Vector3 center(0, 0, 0);
+        for (size_t vi = 0; vi < numVerts; ++vi) {
+          center = center + Vector3(lightMesh->verts[vi*3], lightMesh->verts[vi*3+1], lightMesh->verts[vi*3+2]);
+        }
+        lm.center = center * (1.0f / (float)numVerts);
+        // Compute bounding sphere radius from center
+        float maxR2 = 0.0f;
+        for (size_t vi = 0; vi < numVerts; ++vi) {
+          Vector3 v(lightMesh->verts[vi*3], lightMesh->verts[vi*3+1], lightMesh->verts[vi*3+2]);
+          float r2 = (v - lm.center).MagSq();
+          if (r2 > maxR2) maxR2 = r2;
+        }
+        lm.radius = sqrtf(maxR2);
+        lm.color = Vector3(lightMesh->colors[0], lightMesh->colors[1], lightMesh->colors[2]);
+        lightMarkers.push_back(lm);
+      } else {
+        size_t nodeVertEnd = verts.size() / 3;
+        if (nodeVertEnd > nodeVertStart) {
+          nodeVertexRanges[nodeName] = std::make_pair(nodeVertStart, nodeVertEnd);
+        }
+      }
+    }
+
+    // Rebuild flat (per-face) normals so low-poly meshes look faceted
+    // instead of overly smooth.  Matches the OBJ code-path behaviour.
+    RebuildFlatNormals();
+
+    // Build colliders from all faces, then accelerate with BVH
+    BuildCollidersFromMesh();
+    bvh.Build(colliders);
+    return;
+  }
+
   //Open the file for reading
   std::ifstream fin(std::string("Meshes/") + fname);
   if (!fin) {
@@ -149,6 +439,16 @@ Mesh::Mesh(const std::vector<float>& inVerts, const std::vector<float>& inUVs, b
 Mesh::~Mesh() {
 }
 
+void Mesh::BuildCollidersFromMesh() {
+  colliders.clear();
+  for (size_t i = 0; i + 8 < verts.size(); i += 9) {
+    const Vector3 v1(&verts[i]);
+    const Vector3 v2(&verts[i + 3]);
+    const Vector3 v3(&verts[i + 6]);
+    colliders.push_back(Collider(v1, v2, v3));
+  }
+}
+
 void Mesh::RebuildFlatNormals() {
   normals.clear();
   normals.reserve(verts.size());
@@ -210,4 +510,23 @@ void Mesh::AddFace(
     normals.push_back(normal.y);
     normals.push_back(normal.z);
   }
+}
+
+std::shared_ptr<Mesh> Mesh::ExtractSubMesh(size_t startVert, size_t endVert) const {
+  std::shared_ptr<Mesh> sub(new Mesh());
+  if (endVert <= startVert) return sub;
+  int uvStride = is3DTex ? 3 : 2;
+
+  sub->verts.assign(verts.begin() + startVert * 3, verts.begin() + endVert * 3);
+  if (normals.size() >= endVert * 3) {
+    sub->normals.assign(normals.begin() + startVert * 3, normals.begin() + endVert * 3);
+  }
+  if (uvs.size() >= endVert * uvStride) {
+    sub->uvs.assign(uvs.begin() + startVert * uvStride, uvs.begin() + endVert * uvStride);
+  }
+  if (colors.size() >= endVert * 3) {
+    sub->colors.assign(colors.begin() + startVert * 3, colors.begin() + endVert * 3);
+  }
+  sub->is3DTex = is3DTex;
+  return sub;
 }

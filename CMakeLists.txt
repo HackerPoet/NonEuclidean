@@ -42,6 +42,25 @@ FetchContent_Declare(glslang
 
 FetchContent_MakeAvailable(volk glslang)
 
+# Assimp 
+FetchContent_Declare(assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG v5.3.1
+    GIT_SHALLOW TRUE)
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+set(ASSIMP_INJECT_DEBUG_POSTFIX OFF CACHE BOOL "" FORCE)
+set(INJECT_DEBUG_POSTFIX OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(assimp)
+
+# stb - single-file image loading (header-only, no CMakeLists.txt)
+FetchContent_Declare(stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+    GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(stb)
+
 add_subdirectory(NonEuclidean)
 
 # ---- Portal warp unit test (no Vulkan dependency) -------------------------

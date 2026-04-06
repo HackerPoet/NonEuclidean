@@ -14,6 +14,7 @@
 #include <cassert>
 #include <algorithm>
 #include <iostream>
+#include "stb_image.h"
 
 // ============================================================
 // Helpers
@@ -490,7 +491,7 @@ void VulkanRenderer::DestroyStorageImage() {
 // Descriptors
 // ============================================================
 void VulkanRenderer::CreateDescriptorLayout() {
-  VkDescriptorSetLayoutBinding bindings[11] = {};
+  VkDescriptorSetLayoutBinding bindings[14] = {};
   // 0: TLAS
   bindings[0].binding = 0;
   bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
@@ -523,23 +524,37 @@ void VulkanRenderer::CreateDescriptorLayout() {
   bindings[9].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   bindings[9].descriptorCount = 1;
   bindings[9].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-  // 10: Texture array (variable count — must be the highest binding)
+  // 10: Texture array (partially bound, fixed 128 max)
   bindings[10].binding = 10;
   bindings[10].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
   bindings[10].descriptorCount = 128; // max
   bindings[10].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+  // 11: Vertex colors buffer
+  bindings[11].binding = 11;
+  bindings[11].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  bindings[11].descriptorCount = 1;
+  bindings[11].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+  // 12: Per-vertex texture index buffer
+  bindings[12].binding = 12;
+  bindings[12].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  bindings[12].descriptorCount = 1;
+  bindings[12].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+  // 13: Lights SSBO
+  bindings[13].binding = 13;
+  bindings[13].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  bindings[13].descriptorCount = 1;
+  bindings[13].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
 
-  VkDescriptorBindingFlags bindFlags[11] = {};
-  bindFlags[10] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-                  VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+  VkDescriptorBindingFlags bindFlags[14] = {};
+  bindFlags[10] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
 
   VkDescriptorSetLayoutBindingFlagsCreateInfo flagsCI =
     {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO};
-  flagsCI.bindingCount = 11;
+  flagsCI.bindingCount = 14;
   flagsCI.pBindingFlags = bindFlags;
 
   VkDescriptorSetLayoutCreateInfo ci = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-  ci.bindingCount = 11;
+  ci.bindingCount = 14;
   ci.pBindings = bindings;
   ci.pNext = &flagsCI;
   vkCreateDescriptorSetLayout(device, &ci, nullptr, &descLayout);
@@ -711,37 +726,10 @@ void VulkanRenderer::UploadScene(const World& world) {
   DestroyScene();
 
   // Collect unique meshes and textures
-  std::vector<float> allPos, allNrm, allUV;
+  std::vector<float> allPos, allNrm, allUV, allCol;
+  std::vector<uint32_t> allTexIdx; // per-vertex global texture index (0 = no per-vertex tex)
   std::vector<uint32_t> meshOffsets;
   uint32_t vertexOffset = 0;
-
-  auto ensureMesh = [&](Mesh* m) -> uint32_t {
-    auto it = meshIndexMap.find(m);
-    if (it != meshIndexMap.end()) return it->second;
-    uint32_t idx = (uint32_t)meshGPUs.size();
-    meshIndexMap[m] = idx;
-    MeshGPU mg;
-    mg.vertexOffset = vertexOffset;
-    mg.vertexCount = (uint32_t)m->verts.size() / 3;
-
-    // Append vertex data
-    allPos.insert(allPos.end(), m->verts.begin(), m->verts.end());
-    allNrm.insert(allNrm.end(), m->normals.begin(), m->normals.end());
-    // UVs: always store 2 components
-    if (m->is3DTex) {
-      for (size_t i = 0; i < m->uvs.size(); i += 3) {
-        allUV.push_back(m->uvs[i]);
-        allUV.push_back(m->uvs[i + 1]);
-      }
-    } else {
-      allUV.insert(allUV.end(), m->uvs.begin(), m->uvs.end());
-    }
-
-    meshOffsets.push_back(vertexOffset);
-    vertexOffset += mg.vertexCount;
-    meshGPUs.push_back(mg);
-    return idx;
-  };
 
   auto ensureTex = [&](Texture* t) -> uint32_t {
     if (!t) return 0;
@@ -765,13 +753,19 @@ void VulkanRenderer::UploadScene(const World& world) {
                  staging, stagingMem);
     void* data;
     vkMapMemory(device, stagingMem, 0, imgSize, 0, &data);
-    // Convert BGR to RGBA
+    // Convert to RGBA
     uint8_t* dst = (uint8_t*)data;
-    for (int i = 0; i < t->width * t->height; i++) {
-      dst[i * 4 + 0] = t->pixels[i * 3 + 2]; // R
-      dst[i * 4 + 1] = t->pixels[i * 3 + 1]; // G
-      dst[i * 4 + 2] = t->pixels[i * 3 + 0]; // B
-      dst[i * 4 + 3] = 255;                   // A
+    if (t->isRGBA) {
+      // Already RGBA, 4 bytes per pixel
+      memcpy(dst, t->pixels.data(), t->width * t->height * 4);
+    } else {
+      // Convert BGR to RGBA
+      for (int i = 0; i < t->width * t->height; i++) {
+        dst[i * 4 + 0] = t->pixels[i * 3 + 2]; // R
+        dst[i * 4 + 1] = t->pixels[i * 3 + 1]; // G
+        dst[i * 4 + 2] = t->pixels[i * 3 + 0]; // B
+        dst[i * 4 + 3] = 255;                   // A
+      }
     }
     vkUnmapMemory(device, stagingMem);
 
@@ -791,8 +785,7 @@ void VulkanRenderer::UploadScene(const World& world) {
     return idx;
   };
 
-  // Ensure a default white texture exists
-  // We'll create a 1x1 white pixel as texture 0 if no textures
+  // Ensure a default white texture exists at index 0
   {
     TexGPU tg;
     CreateImage(1, 1, VK_FORMAT_R8G8B8A8_UNORM,
@@ -823,6 +816,56 @@ void VulkanRenderer::UploadScene(const World& world) {
     vkFreeMemory(device, stagingMem, nullptr);
     texGPUs.push_back(tg);
   }
+
+  auto ensureMesh = [&](Mesh* m) -> uint32_t {
+    auto it = meshIndexMap.find(m);
+    if (it != meshIndexMap.end()) return it->second;
+    uint32_t idx = (uint32_t)meshGPUs.size();
+    meshIndexMap[m] = idx;
+    MeshGPU mg;
+    mg.vertexOffset = vertexOffset;
+    mg.vertexCount = (uint32_t)m->verts.size() / 3;
+
+    // Append vertex data
+    allPos.insert(allPos.end(), m->verts.begin(), m->verts.end());
+    allNrm.insert(allNrm.end(), m->normals.begin(), m->normals.end());
+    // UVs: always store 2 components
+    if (m->is3DTex) {
+      for (size_t i = 0; i < m->uvs.size(); i += 3) {
+        allUV.push_back(m->uvs[i]);
+        allUV.push_back(m->uvs[i + 1]);
+      }
+    } else {
+      allUV.insert(allUV.end(), m->uvs.begin(), m->uvs.end());
+    }
+
+    // Vertex colors: 3 floats per vertex; fill with (1,1,1) if mesh has none
+    if (!m->colors.empty()) {
+      allCol.insert(allCol.end(), m->colors.begin(), m->colors.end());
+    } else {
+      allCol.resize(allCol.size() + mg.vertexCount * 3, 1.0f);
+    }
+
+    // Per-vertex texture indices: upload embedded textures, map local → global
+    if (!m->texIndices.empty() && !m->embeddedTextures.empty()) {
+      std::vector<uint32_t> localToGlobal;
+      for (size_t ti = 0; ti < m->embeddedTextures.size(); ++ti) {
+        localToGlobal.push_back(ensureTex(m->embeddedTextures[ti].get()));
+      }
+      for (size_t vi = 0; vi < mg.vertexCount; vi++) {
+        uint32_t li = m->texIndices[vi];
+        uint32_t gi = (li < (uint32_t)localToGlobal.size()) ? localToGlobal[li] : 0;
+        allTexIdx.push_back(gi);
+      }
+    } else {
+      allTexIdx.resize(allTexIdx.size() + mg.vertexCount, 0);
+    }
+
+    meshOffsets.push_back(vertexOffset);
+    vertexOffset += mg.vertexCount;
+    meshGPUs.push_back(mg);
+    return idx;
+  };
 
   // Process objects and portals
   std::vector<GPUInstanceInfo> instanceInfos;
@@ -968,6 +1011,10 @@ void VulkanRenderer::UploadScene(const World& world) {
                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, nrmBuffer, nrmMem);
   uploadBuffer(allUV.data(), allUV.size() * sizeof(float),
                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, uvBuffer, uvMem);
+  uploadBuffer(allCol.data(), allCol.size() * sizeof(float),
+               VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, colBuffer, colMem);
+  uploadBuffer(allTexIdx.data(), allTexIdx.size() * sizeof(uint32_t),
+               VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, texIdxBuffer, texIdxMem);
   uploadBuffer(meshOffsets.data(), meshOffsets.size() * sizeof(uint32_t),
                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, meshOffBuffer, meshOffMem);
   uploadBuffer(instanceInfos.data(), instanceInfos.size() * sizeof(GPUInstanceInfo),
@@ -1131,15 +1178,143 @@ void VulkanRenderer::UploadScene(const World& world) {
     vkFreeMemory(device, scratchMem, nullptr);
   }
 
+  // Create light SSBO (host-visible, updated per-frame in Render)
+  {
+    const VkDeviceSize maxLights = 32;
+    const VkDeviceSize lightBufSize = maxLights * 2 * sizeof(float) * 4; // GPULight = 2 x vec4
+    CreateBuffer(lightBufSize,
+                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 lightBuffer, lightMem);
+    vkMapMemory(device, lightMem, 0, lightBufSize, 0, &lightMapped);
+    memset(lightMapped, 0, (size_t)lightBufSize);
+  }
+
+  // Load HUD overlay image (phone_teto.png)
+  {
+    int ow = 0, oh = 0, oc = 0;
+    unsigned char* pixels = stbi_load("Textures/phone_teto.png", &ow, &oh, &oc, 4);
+    if (pixels && ow > 0 && oh > 0) {
+      overlayWidth = (uint32_t)ow;
+      overlayHeight = (uint32_t)oh;
+
+      CreateImage(overlayWidth, overlayHeight, VK_FORMAT_R8G8B8A8_UNORM,
+                  VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                  overlayImage, overlayMem);
+      overlayView = CreateImageView(overlayImage, VK_FORMAT_R8G8B8A8_UNORM);
+
+      VkDeviceSize imgSize = overlayWidth * overlayHeight * 4;
+      VkBuffer staging; VkDeviceMemory stagingMem;
+      CreateBuffer(imgSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                   staging, stagingMem);
+      void* data;
+      vkMapMemory(device, stagingMem, 0, imgSize, 0, &data);
+      memcpy(data, pixels, imgSize);
+      vkUnmapMemory(device, stagingMem);
+
+      auto cmd = BeginCmd();
+      TransitionImage(cmd, overlayImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+      VkBufferImageCopy region = {};
+      region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+      region.imageExtent = {overlayWidth, overlayHeight, 1};
+      vkCmdCopyBufferToImage(cmd, staging, overlayImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+      TransitionImage(cmd, overlayImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+      EndCmd(cmd);
+
+      vkDestroyBuffer(device, staging, nullptr);
+      vkFreeMemory(device, stagingMem, nullptr);
+      stbi_image_free(pixels);
+
+      // Create overlay composite compute pipeline
+      {
+        VkDescriptorSetLayoutBinding bindings[2] = {};
+        bindings[0].binding = 0;
+        bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        bindings[0].descriptorCount = 1;
+        bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        bindings[1].binding = 1;
+        bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        bindings[1].descriptorCount = 1;
+        bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutCreateInfo dslci = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+        dslci.bindingCount = 2;
+        dslci.pBindings = bindings;
+        vkCreateDescriptorSetLayout(device, &dslci, nullptr, &overlayDescLayout);
+
+        VkPushConstantRange pcRange = {};
+        pcRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        pcRange.offset = 0;
+        pcRange.size = 24; // 3 x ivec2
+
+        VkPipelineLayoutCreateInfo plci = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+        plci.setLayoutCount = 1;
+        plci.pSetLayouts = &overlayDescLayout;
+        plci.pushConstantRangeCount = 1;
+        plci.pPushConstantRanges = &pcRange;
+        vkCreatePipelineLayout(device, &plci, nullptr, &overlayPipeLayout);
+
+        auto compSpirv = CompileGLSL("overlay_composite.comp", EShLangCompute);
+        VkShaderModule compModule = CreateShaderModule(compSpirv);
+
+        VkComputePipelineCreateInfo cpci = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
+        cpci.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        cpci.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        cpci.stage.module = compModule;
+        cpci.stage.pName = "main";
+        cpci.layout = overlayPipeLayout;
+        vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &cpci, nullptr, &overlayPipeline);
+        vkDestroyShaderModule(device, compModule, nullptr);
+      }
+
+      // Allocate overlay descriptor set
+      {
+        VkDescriptorPoolSize poolSize = {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2};
+        VkDescriptorPoolCreateInfo dpci = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+        dpci.maxSets = 1;
+        dpci.poolSizeCount = 1;
+        dpci.pPoolSizes = &poolSize;
+        vkCreateDescriptorPool(device, &dpci, nullptr, &overlayDescPool);
+
+        VkDescriptorSetAllocateInfo dsai = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+        dsai.descriptorPool = overlayDescPool;
+        dsai.descriptorSetCount = 1;
+        dsai.pSetLayouts = &overlayDescLayout;
+        vkAllocateDescriptorSets(device, &dsai, &overlayDescSet);
+
+        VkDescriptorImageInfo imgInfos[2] = {};
+        imgInfos[0].imageView = storageView;
+        imgInfos[0].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imgInfos[1].imageView = overlayView;
+        imgInfos[1].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+        VkWriteDescriptorSet writes[2] = {};
+        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[0].dstSet = overlayDescSet;
+        writes[0].dstBinding = 0;
+        writes[0].descriptorCount = 1;
+        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        writes[0].pImageInfo = &imgInfos[0];
+        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[1].dstSet = overlayDescSet;
+        writes[1].dstBinding = 1;
+        writes[1].descriptorCount = 1;
+        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        writes[1].pImageInfo = &imgInfos[1];
+        vkUpdateDescriptorSets(device, 2, writes, 0, nullptr);
+      }
+    }
+  }
+
   // Allocate and update descriptor set
   {
-    uint32_t texCount = (uint32_t)texGPUs.size();
     VkDescriptorPoolSize poolSizes[] = {
       {VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1},
       {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1},
       {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-      {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 7},
-      {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, std::max(texCount, 1u)},
+      {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
+      {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 128},
     };
     VkDescriptorPoolCreateInfo dpci = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
     dpci.maxSets = 1;
@@ -1148,17 +1323,10 @@ void VulkanRenderer::UploadScene(const World& world) {
     if (descPool) vkDestroyDescriptorPool(device, descPool, nullptr);
     vkCreateDescriptorPool(device, &dpci, nullptr, &descPool);
 
-    uint32_t varCount = texCount;
-    VkDescriptorSetVariableDescriptorCountAllocateInfo varInfo =
-      {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO};
-    varInfo.descriptorSetCount = 1;
-    varInfo.pDescriptorCounts = &varCount;
-
     VkDescriptorSetAllocateInfo dsai = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
     dsai.descriptorPool = descPool;
     dsai.descriptorSetCount = 1;
     dsai.pSetLayouts = &descLayout;
-    dsai.pNext = &varInfo;
     vkAllocateDescriptorSets(device, &dsai, &descSet);
   }
 
@@ -1195,6 +1363,15 @@ void VulkanRenderer::UpdateDescriptorSet() {
   // Portal index SSBO (binding 9)
   VkDescriptorBufferInfo portalIndexInfo = {portalIndexBuffer, 0, VK_WHOLE_SIZE};
 
+  // Vertex colors SSBO (binding 11)
+  VkDescriptorBufferInfo colInfo = {colBuffer, 0, VK_WHOLE_SIZE};
+
+  // Per-vertex texture index SSBO (binding 12)
+  VkDescriptorBufferInfo texIdxInfo = {texIdxBuffer, 0, VK_WHOLE_SIZE};
+
+  // Lights SSBO (binding 13)
+  VkDescriptorBufferInfo lightInfo = {lightBuffer, 0, VK_WHOLE_SIZE};
+
   // Textures
   std::vector<VkDescriptorImageInfo> texInfos(texGPUs.size());
   for (size_t i = 0; i < texGPUs.size(); i++) {
@@ -1203,7 +1380,7 @@ void VulkanRenderer::UpdateDescriptorSet() {
     texInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   }
 
-  VkWriteDescriptorSet writes[11] = {};
+  VkWriteDescriptorSet writes[14] = {};
   for (auto& w : writes) w.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
   writes[0].dstSet = descSet; writes[0].dstBinding = 0;
@@ -1237,7 +1414,19 @@ void VulkanRenderer::UpdateDescriptorSet() {
   writes[10].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
   writes[10].pImageInfo = texInfos.data();
 
-  vkUpdateDescriptorSets(device, 11, writes, 0, nullptr);
+  writes[11].dstSet = descSet; writes[11].dstBinding = 11;
+  writes[11].descriptorCount = 1; writes[11].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  writes[11].pBufferInfo = &colInfo;
+
+  writes[12].dstSet = descSet; writes[12].dstBinding = 12;
+  writes[12].descriptorCount = 1; writes[12].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  writes[12].pBufferInfo = &texIdxInfo;
+
+  writes[13].dstSet = descSet; writes[13].dstBinding = 13;
+  writes[13].descriptorCount = 1; writes[13].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  writes[13].pBufferInfo = &lightInfo;
+
+  vkUpdateDescriptorSets(device, 14, writes, 0, nullptr);
 }
 
 // ============================================================
@@ -1265,11 +1454,8 @@ void VulkanRenderer::Render(const Camera& cam, const World& world) {
     struct alignas(16) UBOData {
       float viewInv[16];  // offset 0
       float projInv[16];  // offset 64
-      float lightPos[4];  // offset 128
-      float lightColor[4];// offset 144, w = ambient scale
-      float lightPos2[4]; // offset 160
-      float lightColor2[4];// offset 176
-      float camPos[4];    // offset 192
+      float camPos[4];    // offset 128, w = time_of_day
+      float params[4];    // offset 144, x = ambientScale, y = lightCount
     };
     static_assert(sizeof(UBOData) <= 256, "UBO too large");
 
@@ -1277,18 +1463,31 @@ void VulkanRenderer::Render(const Camera& cam, const World& world) {
     memset(&ubo, 0, sizeof(ubo));
     memcpy(ubo.viewInv, viewInv.m, 64);
     memcpy(ubo.projInv, projInv.m, 64);
-    ubo.lightPos[0] = world.lightPos.x;  ubo.lightPos[1] = world.lightPos.y;
-    ubo.lightPos[2] = world.lightPos.z;  ubo.lightPos[3] = 0;
-    ubo.lightColor[0] = world.lightColor.x; ubo.lightColor[1] = world.lightColor.y;
-    ubo.lightColor[2] = world.lightColor.z; ubo.lightColor[3] = world.ambientScale;
-    ubo.lightPos2[0] = world.lightPos2.x; ubo.lightPos2[1] = world.lightPos2.y;
-    ubo.lightPos2[2] = world.lightPos2.z; ubo.lightPos2[3] = 0;
-    ubo.lightColor2[0] = world.lightColor2.x; ubo.lightColor2[1] = world.lightColor2.y;
-    ubo.lightColor2[2] = world.lightColor2.z; ubo.lightColor2[3] = 0;
     ubo.camPos[0] = cam.worldPos.x; ubo.camPos[1] = cam.worldPos.y;
     ubo.camPos[2] = cam.worldPos.z; ubo.camPos[3] = world.time_of_day;
+    ubo.params[0] = world.ambientScale;
+    ubo.params[1] = (float)world.lights.size();
 
     memcpy(uboMapped, &ubo, sizeof(ubo));
+  }
+
+  // Update lights SSBO
+  if (lightMapped) {
+    struct GPULight { float pos[4]; float color[4]; };
+    const size_t maxLights = 32;
+    size_t count = world.lights.size() < maxLights ? world.lights.size() : maxLights;
+    GPULight gpuLights[32];
+    memset(gpuLights, 0, sizeof(gpuLights));
+    for (size_t i = 0; i < count; ++i) {
+      gpuLights[i].pos[0] = world.lights[i].pos.x;
+      gpuLights[i].pos[1] = world.lights[i].pos.y;
+      gpuLights[i].pos[2] = world.lights[i].pos.z;
+      gpuLights[i].pos[3] = world.lights[i].radius;
+      gpuLights[i].color[0] = world.lights[i].color.x;
+      gpuLights[i].color[1] = world.lights[i].color.y;
+      gpuLights[i].color[2] = world.lights[i].color.z;
+    }
+    memcpy(lightMapped, gpuLights, sizeof(gpuLights));
   }
 
   // Record command buffer
@@ -1305,6 +1504,37 @@ void VulkanRenderer::Render(const Camera& cam, const World& world) {
 
   vkCmdTraceRaysKHR(cmdBuf, &rgenRegion, &missRegion, &hitRegion, &callRegion,
                     swapExtent.width * GH_SSAA_FACTOR, swapExtent.height * GH_SSAA_FACTOR, 1);
+
+  // Composite overlay onto storage image via compute shader (alpha-blended)
+  if (overlayImage && overlayPipeline) {
+    // Barrier: RT writes -> compute reads on storage image
+    VkMemoryBarrier rtToCompute = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+    rtToCompute.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    rtToCompute.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &rtToCompute, 0, nullptr, 0, nullptr);
+
+    // 60% of storage image height
+    int32_t stH = (int32_t)(swapExtent.height * GH_SSAA_FACTOR);
+    int32_t dstH = stH * 3 / 7;
+    int32_t dstW = dstH * (int32_t)overlayWidth / (int32_t)overlayHeight;
+    int32_t dstX = 0;
+    int32_t dstY = stH - dstH;
+
+    int32_t pc[6] = {dstX, dstY, dstW, dstH, (int32_t)overlayWidth, (int32_t)overlayHeight};
+    vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, overlayPipeline);
+    vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, overlayPipeLayout,
+                            0, 1, &overlayDescSet, 0, nullptr);
+    vkCmdPushConstants(cmdBuf, overlayPipeLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 24, pc);
+    vkCmdDispatch(cmdBuf, ((uint32_t)dstW + 15) / 16, ((uint32_t)dstH + 15) / 16, 1);
+
+    // Barrier: compute writes -> transfer read
+    VkMemoryBarrier barrier = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+  }
 
   // Copy storage image to swapchain image
   TransitionImage(cmdBuf, storageImage, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -1392,10 +1622,24 @@ void VulkanRenderer::DestroyScene() {
   destroyBuf(posBuffer, posMem);
   destroyBuf(nrmBuffer, nrmMem);
   destroyBuf(uvBuffer, uvMem);
+  destroyBuf(colBuffer, colMem);
+  destroyBuf(texIdxBuffer, texIdxMem);
   destroyBuf(meshOffBuffer, meshOffMem);
   destroyBuf(instanceBuffer, instanceMem);
   destroyBuf(portalWarpBuffer, portalWarpMem);
   destroyBuf(portalIndexBuffer, portalIndexMem);
+  if (lightMapped) { vkUnmapMemory(device, lightMem); lightMapped = nullptr; }
+  destroyBuf(lightBuffer, lightMem);
+
+  if (overlayImage) { vkDestroyImage(device, overlayImage, nullptr); overlayImage = VK_NULL_HANDLE; }
+  if (overlayView) { vkDestroyImageView(device, overlayView, nullptr); overlayView = VK_NULL_HANDLE; }
+  if (overlayMem) { vkFreeMemory(device, overlayMem, nullptr); overlayMem = VK_NULL_HANDLE; }
+  if (overlayPipeline) { vkDestroyPipeline(device, overlayPipeline, nullptr); overlayPipeline = VK_NULL_HANDLE; }
+  if (overlayPipeLayout) { vkDestroyPipelineLayout(device, overlayPipeLayout, nullptr); overlayPipeLayout = VK_NULL_HANDLE; }
+  if (overlayDescLayout) { vkDestroyDescriptorSetLayout(device, overlayDescLayout, nullptr); overlayDescLayout = VK_NULL_HANDLE; }
+  if (overlayDescPool) { vkDestroyDescriptorPool(device, overlayDescPool, nullptr); overlayDescPool = VK_NULL_HANDLE; }
+  overlayDescSet = VK_NULL_HANDLE;
+  overlayWidth = 0; overlayHeight = 0;
 
   if (descPool) { vkDestroyDescriptorPool(device, descPool, nullptr); descPool = VK_NULL_HANDLE; }
   descSet = VK_NULL_HANDLE;

@@ -266,10 +266,6 @@ int Engine::Run()
     main_cam.worldPos = player->CamToWorld().Translation();
     main_cam.SetSize(iWidth, iHeight, n, GH_FAR);
 
-    // Set light state
-    main_cam.lightPos = curWorld.lightPos;
-    main_cam.lightColor = curWorld.lightColor;
-
     // Render via Vulkan RT
     renderer.Render(main_cam, curWorld);
   }
@@ -512,22 +508,36 @@ void Engine::Update()
         Matrix4 localToUnit = worldToUnit * obj.LocalToWorld();
         Matrix4 unitToWorld = worldToUnit.Inverse();
 
-        // For each collider
-        for (size_t c = 0; c < obj.mesh->colliders.size(); ++c)
-        {
-          Vector3 push;
-          const Collider &collider = obj.mesh->colliders[c];
-          if (collider.Collide(localToUnit, push))
-          {
-            // If push is too small, just ignore
-            push = unitToWorld.MulDirection(push);
-            curWorld.objects[j]->OnHit(*physical, push);
-            physical->OnCollide(*curWorld.objects[j], push);
+        if (!obj.mesh->bvh.Empty()) {
+          // BVH-accelerated collision (divide and conquer)
+          obj.mesh->bvh.Query(localToUnit, obj.mesh->colliders,
+            [&](const Collider& /*collider*/, Vector3 push) {
+              push = unitToWorld.MulDirection(push);
+              curWorld.objects[j]->OnHit(*physical, push);
+              physical->OnCollide(*curWorld.objects[j], push);
 
-            worldToLocal = physical->WorldToLocal();
-            worldToUnit = sphere.LocalToUnit() * worldToLocal;
-            localToUnit = worldToUnit * obj.LocalToWorld();
-            unitToWorld = worldToUnit.Inverse();
+              worldToLocal = physical->WorldToLocal();
+              worldToUnit = sphere.LocalToUnit() * worldToLocal;
+              localToUnit = worldToUnit * obj.LocalToWorld();
+              unitToWorld = worldToUnit.Inverse();
+            });
+        } else {
+          // Linear fallback for small meshes / .obj with explicit colliders
+          for (size_t c = 0; c < obj.mesh->colliders.size(); ++c)
+          {
+            Vector3 push;
+            const Collider &collider = obj.mesh->colliders[c];
+            if (collider.Collide(localToUnit, push))
+            {
+              push = unitToWorld.MulDirection(push);
+              curWorld.objects[j]->OnHit(*physical, push);
+              physical->OnCollide(*curWorld.objects[j], push);
+
+              worldToLocal = physical->WorldToLocal();
+              worldToUnit = sphere.LocalToUnit() * worldToLocal;
+              localToUnit = worldToUnit * obj.LocalToWorld();
+              unitToWorld = worldToUnit.Inverse();
+            }
           }
         }
       }

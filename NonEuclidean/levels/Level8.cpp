@@ -87,8 +87,7 @@ void Level8::Load(World& world, Player& player) {
   lightCube->emissive   = Vector3(8.0f, 7.6f, 6.4f);
   world.objects.push_back(lightCube);
 
-  world.lightPos   = lightCube->pos;
-  world.lightColor = lightCube->emissive;
+  world.lights.push_back({lightCube->pos, lightCube->emissive, 0.0f});
 
   // A thin blocker casts a shadow onto the readout screen when the light is warped correctly.
   std::shared_ptr<Object> shadowPost(new Object());

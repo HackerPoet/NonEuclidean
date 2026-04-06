@@ -1,6 +1,8 @@
 #include "Level1.h"
 #include "DeadTree.h"
 #include "Object.h"
+#include "Portal.h"
+#include "PortalFrameTrees.h"
 #include "Resources.h"
 #include "Sky.h"
 #include "GameHeader.h"
@@ -125,7 +127,7 @@ void CreateBorderTreeRing(World& world, float radius) {
   const int borderTreeCount = 72;
   const float borderTreeScale = 16.0f;
 
-  for (int i = 0; i < borderTreeCount; ++i) {
+  for (int i = 0; i < borderTreeCount; i += 5) {
     float angle = (2.0f * GH_PI * static_cast<float>(i)) / static_cast<float>(borderTreeCount);
     std::shared_ptr<DeadTree> tree(new DeadTree());
     tree->scale = Vector3(borderTreeScale, borderTreeScale, borderTreeScale);
@@ -160,8 +162,7 @@ void Level1::Load(World &world, Player &player)
   cube->emissive = Vector3(4.0f, 3.8f, 3.2f);
   world.objects.push_back(cube);
 
-  world.lightPos = cube->pos;
-  world.lightColor = cube->emissive;
+  world.lights.push_back({cube->pos, cube->emissive, 0.0f});
 
   std::shared_ptr<Object> markerCube(new Object());
   markerCube->mesh = AquireMesh("cube.obj");
@@ -172,6 +173,58 @@ void Level1::Load(World &world, Player &player)
   world.objects.push_back(markerCube);
 
   CreateDeadForest(world);
+
+  // Portal pairs with tree frames
+  const PortalFrameLayoutSettings frameLayout = GetLevel2PortalFrameLayoutSettings(true);
+  const Vector3 portalScale(frameLayout.portalHalfWidth, 15.6f, 1.0f);
+
+  std::shared_ptr<Portal> yellowA(new Portal());
+  yellowA->pos = Vector3(-3.2387f, 0.5f, 85.6142f);
+  yellowA->euler.y = std::atan2(-yellowA->pos.x, -yellowA->pos.z);
+  yellowA->scale = portalScale;
+  world.portals.push_back(yellowA);
+  AddPortalFrameTrees(world, yellowA->pos, yellowA->euler.y, frameLayout.portalHalfWidth, frameLayout.treeScale, false, yellowA->euler.y);
+
+  std::shared_ptr<Portal> yellowB(new Portal());
+  yellowB->pos = Vector3(-20.2574f, 0.5f, -94.9406f);
+  yellowB->euler.y = std::atan2(-yellowB->pos.x, -yellowB->pos.z);
+  yellowB->scale = portalScale;
+  world.portals.push_back(yellowB);
+  AddPortalFrameTrees(world, yellowB->pos, yellowB->euler.y, frameLayout.portalHalfWidth, frameLayout.treeScale, false, yellowB->euler.y);
+
+  Portal::Connect(yellowA, yellowB);
+
+  std::shared_ptr<Portal> redA(new Portal());
+  redA->pos = Vector3(-72.1206f, 0.5f, 49.7098f);
+  redA->euler.y = std::atan2(-redA->pos.x, -redA->pos.z);
+  redA->scale = portalScale;
+  world.portals.push_back(redA);
+  AddPortalFrameTrees(world, redA->pos, redA->euler.y, frameLayout.portalHalfWidth, frameLayout.treeScale, false, redA->euler.y);
+
+  std::shared_ptr<Portal> redB(new Portal());
+  redB->pos = Vector3(72.0126f, 0.5f, 63.2051f);
+  redB->euler.y = std::atan2(-redB->pos.x, -redB->pos.z);
+  redB->scale = portalScale;
+  world.portals.push_back(redB);
+  AddPortalFrameTrees(world, redB->pos, redB->euler.y, frameLayout.portalHalfWidth, frameLayout.treeScale, false, redB->euler.y);
+
+  Portal::Connect(redA, redB);
+
+  std::shared_ptr<Portal> greenA(new Portal());
+  greenA->pos = Vector3(52.3437f, 0.5f, -29.9776f);
+  greenA->euler.y = std::atan2(-greenA->pos.x, -greenA->pos.z);
+  greenA->scale = portalScale;
+  world.portals.push_back(greenA);
+  AddPortalFrameTrees(world, greenA->pos, greenA->euler.y, frameLayout.portalHalfWidth, frameLayout.treeScale, false, greenA->euler.y);
+
+  std::shared_ptr<Portal> greenB(new Portal());
+  greenB->pos = Vector3(-59.0393f, 0.5f, -3.3478f);
+  greenB->euler.y = std::atan2(-greenB->pos.x, -greenB->pos.z);
+  greenB->scale = portalScale;
+  world.portals.push_back(greenB);
+  AddPortalFrameTrees(world, greenB->pos, greenB->euler.y, frameLayout.portalHalfWidth, frameLayout.treeScale, false, greenB->euler.y);
+
+  Portal::Connect(greenA, greenB);
 
   world.sky = std::make_shared<Sky>("sky");
 

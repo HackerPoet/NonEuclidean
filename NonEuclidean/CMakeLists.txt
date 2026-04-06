@@ -13,6 +13,7 @@ set(SOURCES
     render/Texture.cpp
     render/ShadowMap.cpp
     render/VulkanRenderer.cpp
+    render/stb_image_impl.cpp
     levels/Level1.cpp
     levels/Level2.cpp
     levels/Level3.cpp
@@ -22,6 +23,7 @@ set(SOURCES
     levels/Level7.cpp
     levels/Level8.cpp
     game/Collider.cpp
+    game/ColliderBVH.cpp
     game/Object.cpp
     game/Physical.cpp
     game/Player.cpp
@@ -41,6 +43,7 @@ target_include_directories(NonEuclidean PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/levels"
     "${CMAKE_CURRENT_SOURCE_DIR}/game"
     "${CMAKE_CURRENT_SOURCE_DIR}/objects"
+    "${stb_SOURCE_DIR}"
 )
 
 target_compile_definitions(NonEuclidean PRIVATE
@@ -55,6 +58,7 @@ target_link_libraries(NonEuclidean PRIVATE
     glslang
     SPIRV
     glslang-default-resource-limits
+    assimp
 )
 
 if(MSVC)

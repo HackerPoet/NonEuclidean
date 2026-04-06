@@ -92,10 +92,7 @@ void World::Clear() {
   objects.clear();
   portals.clear();
   sky.reset();
-  lightPos = Vector3(0.0f);
-  lightColor = Vector3(0.0f);
-  lightPos2 = Vector3(0.0f);
-  lightColor2 = Vector3(0.0f);
+  lights.clear();
   ambientScale = 1.0f;
   lightVP.MakeIdentity();
   lightCookie.reset();
@@ -182,10 +179,7 @@ bool World::importScene(const char* filename) {
   }
   ambientScale = importedWorld.ambientScale;
   time_of_day = importedWorld.time_of_day;
-  lightPos = importedWorld.lightPos;
-  lightColor = importedWorld.lightColor;
-  lightPos2 = importedWorld.lightPos2;
-  lightColor2 = importedWorld.lightColor2;
+  lights.insert(lights.end(), importedWorld.lights.begin(), importedWorld.lights.end());
   lightCookie = importedWorld.lightCookie;
   lightVP = importedWorld.lightVP;
   materializePortalMarkers();

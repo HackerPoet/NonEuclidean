@@ -4,16 +4,20 @@
 #include "Sky.h"
 #include "Texture.h"
 #include <memory>
+#include <vector>
+
+struct PointLight {
+  Vector3 pos;
+  Vector3 color;
+  float radius;  // shadow rays stop this far from pos to avoid self-occlusion
+};
 
 struct World {
   PObjectVec objects;
   PPortalVec portals;
   std::shared_ptr<Sky> sky; // null = use engine default sky
 
-  Vector3 lightPos;
-  Vector3 lightColor;
-  Vector3 lightPos2;
-  Vector3 lightColor2;
+  std::vector<PointLight> lights;
   float ambientScale = 1.0f; // multiplies the shader ambient term for this world
   Matrix4 lightVP; // light view-projection for shadow mapping
   std::shared_ptr<Texture> lightCookie; // projected light cookie texture

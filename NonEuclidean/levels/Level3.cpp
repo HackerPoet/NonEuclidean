@@ -115,13 +115,11 @@ void Level3::Load(World& world, Player& player) {
 
   std::shared_ptr<Object> keyLight = CreateLightCube(Vector3(-4.0f, 7.5f, 10.0f), Vector3(4.4f, 4.0f, 3.4f));
   world.objects.push_back(keyLight);
-  world.lightPos = keyLight->pos;
-  world.lightColor = keyLight->emissive;
+  world.lights.push_back({keyLight->pos, keyLight->emissive, 0.0f});
 
   std::shared_ptr<Object> fillLight = CreateLightCube(Vector3(26.0f, 6.5f, -12.0f), Vector3(2.4f, 3.2f, 4.8f));
   world.objects.push_back(fillLight);
-  world.lightPos2 = fillLight->pos;
-  world.lightColor2 = fillLight->emissive;
+  world.lights.push_back({fillLight->pos, fillLight->emissive, 0.0f});
 
   std::shared_ptr<Portal> portalA = CreatePortal(world, Vector3(0.0f, portalScale.y, 0.0f), GH_PI, portalScale);
   std::shared_ptr<Portal> portalB = CreatePortal(world, Vector3(26.0f, portalScale.y, -14.0f), -GH_PI / 2.0f, portalScale);

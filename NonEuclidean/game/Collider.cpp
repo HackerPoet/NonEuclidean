@@ -54,3 +54,16 @@ void Collider::CreateSorted(const Vector3& da, const Vector3& c, const Vector3& 
   mat.SetXAxis(da);
   mat.SetYAxis(db);
 }
+
+void Collider::GetAABB(Vector3& outMin, Vector3& outMax) const {
+  Vector3 c = mat.Translation();
+  Vector3 x = mat.XAxis();
+  Vector3 y = mat.YAxis();
+  // The parallelogram covers c ± x ± y; take component-wise abs for AABB
+  Vector3 extent(
+    std::abs(x.x) + std::abs(y.x),
+    std::abs(x.y) + std::abs(y.y),
+    std::abs(x.z) + std::abs(y.z));
+  outMin = c - extent;
+  outMax = c + extent;
+}

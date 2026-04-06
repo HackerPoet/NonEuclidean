@@ -27,9 +27,11 @@ inline void AddPortalFrameTreesNamed(
   float portalYaw,
   float portalHalfWidth,
   float treeScale,
-  bool rotateFirstTreeLeft = false) {
-  const Vector3 right(std::cos(portalYaw), 0.0f, std::sin(portalYaw));
-  const Vector3 forward(-std::sin(portalYaw), 0.0f, -std::cos(portalYaw));
+  bool rotateFirstTreeLeft = false,
+  float frameYaw = NAN) {
+  float layoutYaw = std::isnan(frameYaw) ? portalYaw : frameYaw;
+  const Vector3 right(std::cos(layoutYaw), 0.0f, std::sin(layoutYaw));
+  const Vector3 forward(-std::sin(layoutYaw), 0.0f, -std::cos(layoutYaw));
   const float directions[2] = {-1.0f, 1.0f};
   const float treeOffset = portalHalfWidth + 2.1f;
   const float leftYawOffset = 10.0f * GH_PI / 180.0f;
@@ -57,6 +59,7 @@ inline void AddPortalFrameTrees(
   float portalYaw,
   float portalHalfWidth,
   float treeScale,
-  bool rotateFirstTreeLeft = false) {
-  AddPortalFrameTreesNamed(world, std::string(), portalPos, portalYaw, portalHalfWidth, treeScale, rotateFirstTreeLeft);
+  bool rotateFirstTreeLeft = false,
+  float frameYaw = NAN) {
+  AddPortalFrameTreesNamed(world, std::string(), portalPos, portalYaw, portalHalfWidth, treeScale, rotateFirstTreeLeft, frameYaw);
 }

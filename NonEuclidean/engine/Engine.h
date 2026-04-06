@@ -30,8 +30,7 @@ public:
 
   const Player& GetPlayer() const { return *player; }
   float NearestPortalDist() const;
-  const Vector3& GetLightPos() const { return curWorld.lightPos; }
-  const Vector3& GetLightColor() const { return curWorld.lightColor; }
+  const std::vector<PointLight>& GetLights() const { return curWorld.lights; }
   const Matrix4& GetLightVP() const { return curWorld.lightVP; }
   bool HasLightCookie() const { return curWorld.lightCookie != nullptr; }
 

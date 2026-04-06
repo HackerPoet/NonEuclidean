@@ -289,8 +289,10 @@ bool SaveSceneFile(const char* filename, const World& world, const Player* playe
   out << "AMBIENT " << world.ambientScale << '\n';
   out << "TIME " << world.time_of_day << '\n';
   out << "SKY " << (world.sky ? 1 : 0) << '\n';
-  out << "LIGHT1 "; WriteVector3(out, world.lightPos); out << ' '; WriteVector3(out, world.lightColor); out << '\n';
-  out << "LIGHT2 "; WriteVector3(out, world.lightPos2); out << ' '; WriteVector3(out, world.lightColor2); out << '\n';
+  out << "LIGHTS " << world.lights.size() << '\n';
+  for (size_t i = 0; i < world.lights.size(); ++i) {
+    out << "LIGHT "; WriteVector3(out, world.lights[i].pos); out << ' '; WriteVector3(out, world.lights[i].color); out << '\n';
+  }
 
   size_t savedObjectCount = 0;
   for (size_t i = 0; i < world.objects.size(); ++i) {
@@ -349,9 +351,26 @@ bool LoadSceneFile(const char* filename, World& world, Player* player) {
         world.sky = std::make_shared<Sky>("sky");
       }
     } else if (token == "LIGHT1") {
-      if (!ReadVector3(in, world.lightPos) || !ReadVector3(in, world.lightColor)) return false;
+      // Legacy: convert fixed light slot to lights vector
+      Vector3 pos, col;
+      if (!ReadVector3(in, pos) || !ReadVector3(in, col)) return false;
+      if (col.MagSq() > 0.0f) world.lights.push_back({pos, col, 0.0f});
     } else if (token == "LIGHT2") {
-      if (!ReadVector3(in, world.lightPos2) || !ReadVector3(in, world.lightColor2)) return false;
+      // Legacy: convert fixed light slot to lights vector
+      Vector3 pos, col;
+      if (!ReadVector3(in, pos) || !ReadVector3(in, col)) return false;
+      if (col.MagSq() > 0.0f) world.lights.push_back({pos, col, 0.0f});
+    } else if (token == "LIGHTS") {
+      size_t count = 0;
+      if (!(in >> count)) return false;
+      for (size_t i = 0; i < count; ++i) {
+        std::string marker;
+        if (!(in >> marker) || marker != "LIGHT") return false;
+        PointLight pl;
+        pl.radius = 0.0f;
+        if (!ReadVector3(in, pl.pos) || !ReadVector3(in, pl.color)) return false;
+        world.lights.push_back(pl);
+      }
     } else if (token == "OBJECTS") {
       size_t count = 0;
       if (!(in >> count)) return false;

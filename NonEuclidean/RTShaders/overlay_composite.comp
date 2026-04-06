@@ -1,0 +1,26 @@
+#version 460
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(binding = 0, rgba8) uniform image2D storageImg;
+layout(binding = 1, rgba8) uniform readonly image2D overlayImg;
+
+layout(push_constant) uniform PC {
+    ivec2 dstOffset;  // top-left corner in storage image coords
+    ivec2 dstSize;    // overlay destination size in pixels
+    ivec2 srcSize;    // overlay source image size
+};
+
+void main() {
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+    if (gid.x >= dstSize.x || gid.y >= dstSize.y) return;
+
+    ivec2 dstCoord = dstOffset + gid;
+    // Nearest-neighbor sample from overlay (scaled)
+    ivec2 srcCoord = gid * srcSize / dstSize;
+    vec4 fg = imageLoad(overlayImg, srcCoord);
+    vec4 bg = imageLoad(storageImg, dstCoord);
+
+    // Straight-alpha compositing (stbi_load gives non-premultiplied alpha)
+    vec3 result = fg.rgb * fg.a + bg.rgb * (1.0 - fg.a);
+    imageStore(storageImg, dstCoord, vec4(result, 1.0));
+}

@@ -22,11 +22,16 @@ layout(binding = 0, set = 0) uniform accelerationStructureEXT tlas;
 layout(std140, binding = 2, set = 0) uniform UBO {
     layout(row_major) mat4 viewInv;
     layout(row_major) mat4 projInv;
-    vec4 lightPos;
-    vec4 lightColor; // xyz = point light color, w = ambient scale
-    vec4 lightPos2;
-    vec4 lightColor2; // xyz = second point light color
     vec4 camPos;
+    vec4 params;  // x = ambientScale, y = lightCount
+};
+
+struct GPULight {
+    vec4 pos;
+    vec4 color;
+};
+layout(std430, binding = 13, set = 0) readonly buffer Lights {
+    GPULight lights[];
 };
 
 struct InstanceInfo {
@@ -69,6 +74,12 @@ layout(std430, binding = 6, set = 0) readonly buffer UVs {
 layout(std430, binding = 7, set = 0) readonly buffer MeshOff {
     uint meshOff[];
 };
+layout(std430, binding = 11, set = 0) readonly buffer Colors {
+    float col[];
+};
+layout(std430, binding = 12, set = 0) readonly buffer TexIndices {
+    uint vtex[];
+};
 layout(binding = 10, set = 0) uniform sampler2D textures[];
 
 vec3 getPos(uint i) {
@@ -79,6 +90,9 @@ vec3 getNrm(uint i) {
 }
 vec2 getUV(uint i) {
     return vec2(uvs[i*2], uvs[i*2+1]);
+}
+vec3 getCol(uint i) {
+    return vec3(col[i*3], col[i*3+1], col[i*3+2]);
 }
 
 vec3 mulPoint(mat4 m, vec3 p) {
@@ -119,6 +133,7 @@ void main() {
     vec3 lpos = b.x * getPos(v0) + b.y * getPos(v0+1) + b.z * getPos(v0+2);
     vec3 lnrm = b.x * getNrm(v0) + b.y * getNrm(v0+1) + b.z * getNrm(v0+2);
     vec2 luv  = b.x * getUV(v0)  + b.y * getUV(v0+1)  + b.z * getUV(v0+2);
+    vec3 lcol = b.x * getCol(v0) + b.y * getCol(v0+1) + b.z * getCol(v0+2);
 
     // Transform position to world space using the instance model matrix.
     // Normals use the transpose-inverse (normalMat) so non-uniform scale
@@ -132,7 +147,7 @@ void main() {
     if (dot(geomNrm, worldNrm) < 0.0) {
         geomNrm = -geomNrm;
     }
-    const int MAX_POINT_LIGHTS = 2;
+    const int numPointLights = int(params.y);
 
     // Build the list of portals visible from the shaded world-space hit point.
     // Each point light builds its own portal-visible list later so portal-
@@ -176,8 +191,9 @@ void main() {
     }
 
     // ── Material ───────────────────────────────────────────────────
-    uint texIdx = ii.indices.z;  // index into the bindless texture array
-    vec3 albedo   = texture(textures[nonuniformEXT(texIdx)], luv).rgb;
+    uint perVertTexIdx = vtex[v0]; // per-vertex texture index (0 = use per-instance)
+    uint texIdx = perVertTexIdx != 0u ? perVertTexIdx : ii.indices.z;
+    vec3 albedo   = texture(textures[nonuniformEXT(texIdx)], luv).rgb * lcol;
     vec3 emissive = ii.emissive.xyz;  // surfaces like the light cube glow
 
     // V points from the hit point back toward the ray origin.
@@ -193,9 +209,10 @@ void main() {
     vec3 ptDiffuse = vec3(0.0);
     vec3 ptSpecular = vec3(0.0);
     const float PORTAL_MATCH_EPS = 0.05;
-    for (int lightIndex = 0; lightIndex < MAX_POINT_LIGHTS; ++lightIndex) {
-        vec3 pointLightPos = lightIndex == 0 ? lightPos.xyz : lightPos2.xyz;
-        vec3 pointLightColor = lightIndex == 0 ? lightColor.xyz : lightColor2.xyz;
+    for (int lightIndex = 0; lightIndex < numPointLights; ++lightIndex) {
+        vec3 pointLightPos = lights[lightIndex].pos.xyz;
+        float lightRadius = lights[lightIndex].pos.w; // shadow-skip radius around light
+        vec3 pointLightColor = lights[lightIndex].color.xyz;
         if (length(pointLightColor) <= 0.001) continue;
 
         uint visibleLightPortalList[MAX_VISIBLE_PORTALS];
@@ -218,7 +235,7 @@ void main() {
                 traceRayEXT(tlas,
                     gl_RayFlagsOpaqueEXT,
                     0x01, 1, 2, 1,
-                    pointLightPos + portalDir * 0.001, 0.001, portalDir, portalDist - 0.002,
+                    pointLightPos + portalDir * max(lightRadius, 0.001), 0.001, portalDir, portalDist - 0.002,
                     1);
 
                 if (shadowPayload > 0.5) {
@@ -238,11 +255,11 @@ void main() {
             traceRayEXT(tlas,
                 gl_RayFlagsOpaqueEXT,
                 0x01, 1, 2, 1,
-                directOrigin, 0.001, directDir, directDist - 0.002,
+                directOrigin, 0.001, directDir, directDist - lightRadius - 0.002,
                 1);
             float directShadow = shadowPayload;
 
-            float directAtten = 1.0 / (1.0 + 0.09 * directDist + 0.032 * directDist * directDist);
+            float directAtten = 1.0 / (1.0 + directDist * directDist * 0.003);
             float directDiffuseTerm = max(dot(worldNrm, directDir), 0.0);
             ptDiffuse += directDiffuseTerm * pointLightColor * albedo * directAtten * directShadow;
 
@@ -333,13 +350,13 @@ void main() {
             traceRayEXT(tlas,
                 gl_RayFlagsOpaqueEXT,
                 0x01, 1, 2, 1,
-                portalExitOrigin, 0.001, farDir, farDist - 0.002,
+                portalExitOrigin, 0.001, farDir, farDist - lightRadius - 0.002,
                 1);
             portalShadow *= shadowPayload;
             if (portalShadow <= 0.0) continue;
 
             float portalDist = tHit + farDist;
-            float portalAtten = 1.0 / (1.0 + 0.09 * portalDist + 0.032 * portalDist * portalDist);
+            float portalAtten = 1.0 / (1.0 + portalDist * portalDist * 0.003);
             float portalDiffuseTerm = max(dot(worldNrm, currentDir), 0.0);
             ptDiffuse += portalDiffuseTerm * pointLightColor * albedo * portalAtten * portalShadow;
 
@@ -400,7 +417,7 @@ void main() {
     vec3 dayAmb = vec3(0.18, 0.22, 0.30);
     vec3 nightAmb = vec3(0.02, 0.015, 0.03);
     vec3 twilightAmb = vec3(0.15, 0.08, 0.04);
-    vec3 ambient = (mix(nightAmb, dayAmb, day) + twilightAmb * twilight * 0.1) * albedo * lightColor.w;
+    vec3 ambient = (mix(nightAmb, dayAmb, day) + twilightAmb * twilight * 0.1) * albedo * params.x;
 
     // ── Combine all terms → final pixel radiance ──────────────────
     // This value is written into payload.rgb and returned to whoever

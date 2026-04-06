@@ -5,31 +5,35 @@
 #include "Sky.h"
 #include <cmath>
 
-namespace {
+namespace
+{
 
-std::shared_ptr<Portal> CreatePortal(World& world, const Vector3& pos, float yaw, const Vector3& scale) {
-  std::shared_ptr<Portal> portal(new Portal());
-  portal->pos = pos;
-  portal->euler.y = yaw;
-  portal->scale = scale;
-  world.portals.push_back(portal);
-  return portal;
+  std::shared_ptr<Portal> CreatePortal(World &world, const Vector3 &pos, float yaw, const Vector3 &scale)
+  {
+    std::shared_ptr<Portal> portal(new Portal());
+    portal->pos = pos;
+    portal->euler.y = yaw;
+    portal->scale = scale;
+    world.portals.push_back(portal);
+    return portal;
+  }
+
+  std::shared_ptr<Object> CreateLightCube(const Vector3 &pos, const Vector3 &color)
+  {
+    std::shared_ptr<Object> cube(new Object());
+    cube->mesh = AquireMesh("cube.obj");
+    cube->shader = AquireShader("texture");
+    cube->texture = AquireTexture("white.bmp");
+    cube->pos = pos;
+    cube->castShadow = false;
+    cube->emissive = color;
+    return cube;
+  }
+
 }
 
-std::shared_ptr<Object> CreateLightCube(const Vector3& pos, const Vector3& color) {
-  std::shared_ptr<Object> cube(new Object());
-  cube->mesh = AquireMesh("cube.obj");
-  cube->shader = AquireShader("texture");
-  cube->texture = AquireTexture("white.bmp");
-  cube->pos = pos;
-  cube->castShadow = false;
-  cube->emissive = color;
-  return cube;
-}
-
-}
-
-void Level2::Load(World& world, Player& player) {
+void Level2::Load(World &world, Player &player)
+{
   const bool wideLayout = true;
   const PortalFrameLayoutSettings frameLayout = GetLevel2PortalFrameLayoutSettings(wideLayout);
 
@@ -45,19 +49,18 @@ void Level2::Load(World& world, Player& player) {
 
   std::shared_ptr<Object> lightCube = CreateLightCube(Vector3(0.0f, 4.0f, 0.0f), Vector3(4.0f, 3.8f, 3.2f));
   world.objects.push_back(lightCube);
-  world.lightPos = lightCube->pos;
-  world.lightColor = lightCube->emissive;
+  world.lights.push_back({lightCube->pos, lightCube->emissive, 0.0f});
 
   std::shared_ptr<Object> accentLightCube = CreateLightCube(
       Vector3(-(frameLayout.portalHalfWidth + 4.0f), frameLayout.portalHalfHeight * 0.65f, -frameLayout.portalDistance * 0.35f),
       Vector3(2.6f, 3.0f, 4.4f));
   world.objects.push_back(accentLightCube);
-  world.lightPos2 = accentLightCube->pos;
-  world.lightColor2 = accentLightCube->emissive;
+  world.lights.push_back({accentLightCube->pos, accentLightCube->emissive, 0.0f});
 
   const Vector3 portalScale(frameLayout.portalHalfWidth, frameLayout.portalHalfHeight, 1.0f);
 
-  // Keep the portals facing each other so Level 2 works as a simple portal test range.
+  // Keep the portals facing each other so Level 2 works as a simple portal test
+  // range.
   std::shared_ptr<Portal> portalA = CreatePortal(world, Vector3(0.0f, frameLayout.portalHalfHeight, -frameLayout.portalDistance), 0.0f, portalScale);
   std::shared_ptr<Portal> portalB = CreatePortal(world, Vector3(0.0f, frameLayout.portalHalfHeight, frameLayout.portalDistance), 0.0f, portalScale);
 
