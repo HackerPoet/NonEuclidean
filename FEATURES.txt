@@ -1,0 +1,48 @@
+Features in main_level over master
+====================================
+
+RENDERING
+- GLB/GLTF mesh loading via Assimp (embedded textures, vertex colors, per-vertex texture indices)
+- Arbitrary dynamic point lights (SSBO binding 13, unlimited count vs. hardcoded 2)
+- Per-light shadow radius to prevent self-occlusion from enclosing geometry
+- Light marker extraction from GLB nodes named "light*" during mesh loading
+- Vertex colors support in ray tracing (SSBO binding 11, multiplied into albedo)
+- Per-vertex texture index buffer (SSBO binding 12) for multi-material meshes
+- RGBA texture support (in addition to legacy BGR)
+- HUD overlay with alpha-blended compositing via compute shader (overlay_composite.comp)
+- Time-of-day sky color in miss shader
+
+PORTAL SYSTEM
+- Portal warp SSBO (binding 8) with precomputed center/forward/axes/AABB
+- Portal index buffer (binding 9) for fast iteration over portal instances only
+- AABB early-out culling for portal visibility checks in closest-hit shader
+- PortalMeshWarp utility for computing warp transforms
+- Portal markers extracted from GLB nodes named "Portal {id}" with auto-pairing
+
+PHYSICS / COLLISIONS
+- BVH-accelerated collision detection (ColliderBVH)
+- BuildCollidersFromMesh() generates collision geometry from loaded mesh data
+
+GAMEPLAY
+- Sprint (Shift key, configurable GH_SPRINT_MULT = 1.8x)
+- Dash/teleport (X key, configurable GH_DASH_DISTANCE = 10 units)
+- Jump (Space key, velocity += 2.0)
+- SetLookAngles / LookPitch / LookYaw accessors on Player
+
+EDITOR / TOOLS
+- Scene save/load system (F5 save, F9 load) via SceneFile serialization
+- Named marker placement (M key opens naming prompt, Enter confirms, Escape cancels)
+- Auto-naming for markers (marker_001, marker_002, ...)
+- Unique name enforcement for markers
+- Undo marker (U or Ctrl+Z)
+- World import/export from .scene files
+- Window title updates to show marker naming state
+
+LEVELS
+- Level 5: Custom GLB scene with ground texture override, light extraction, vertical portals, horizontal floor portals
+- Levels 1-4, 7-8: Migrated to dynamic lights system
+
+BUILD
+- stb_image compiled as separate translation unit (stb_image_impl.cpp)
+- Assimp fetched via CMake FetchContent
+- PortalFrameTrees reusable scene object

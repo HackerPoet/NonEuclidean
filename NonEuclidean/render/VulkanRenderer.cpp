@@ -949,8 +949,8 @@ void VulkanRenderer::UploadScene(const World& world) {
     warpInfo.axisY[0] = portalY.x; warpInfo.axisY[1] = portalY.y; warpInfo.axisY[2] = portalY.z;
 
     // AABB for portal influence zone: conservative box around portal center.
-    // At radius ~54 units the quadratic attenuation drops below 1%, so use 50.
-    const float influenceRadius = 50.0f;
+    // Sized to enclose any nearby geometry that could receive portal-warped light.
+    const float influenceRadius = 20.0f;
     warpInfo.aabbMin[0] = portalCenter.x - influenceRadius;
     warpInfo.aabbMin[1] = portalCenter.y - influenceRadius;
     warpInfo.aabbMin[2] = portalCenter.z - influenceRadius;

@@ -152,7 +152,7 @@ void main() {
     // Build the list of portals visible from the shaded world-space hit point.
     // Each point light builds its own portal-visible list later so portal-
     // warped lighting can be evaluated independently per light.
-    const int MAX_VISIBLE_PORTALS = 16;
+    const int MAX_VISIBLE_PORTALS = 8;
     uint visiblePortalList[MAX_VISIBLE_PORTALS];
     uint visiblePortalFace[MAX_VISIBLE_PORTALS];
     int visiblePortalCount = 0; {
@@ -208,43 +208,13 @@ void main() {
     // visible from each light. Paths are summed rather than collapsed to one.
     vec3 ptDiffuse = vec3(0.0);
     vec3 ptSpecular = vec3(0.0);
-    const float PORTAL_MATCH_EPS = 0.05;
     for (int lightIndex = 0; lightIndex < numPointLights; ++lightIndex) {
         vec3 pointLightPos = lights[lightIndex].pos.xyz;
         float lightRadius = lights[lightIndex].pos.w; // shadow-skip radius around light
         vec3 pointLightColor = lights[lightIndex].color.xyz;
         if (length(pointLightColor) <= 0.001) continue;
 
-        uint visibleLightPortalList[MAX_VISIBLE_PORTALS];
-        int visibleLightPortalCount = 0; {
-            int nPortals = int(portalIndices.length());
-            for (int pi = 0; pi < nPortals && visibleLightPortalCount < MAX_VISIBLE_PORTALS; ++pi) {
-                uint portalIndex = portalIndices[pi];
-                PortalWarpInfo pw = portalWarps[inst[portalIndex].indices.w];
-
-                // AABB early-out: skip if light is outside portal influence volume
-                if (any(lessThan(pointLightPos, pw.aabbMin.xyz)) || any(greaterThan(pointLightPos, pw.aabbMax.xyz))) continue;
-
-                vec3 portalPos = pw.center.xyz;
-                vec3 toPortal = portalPos - pointLightPos;
-                float portalDist = length(toPortal);
-                if (portalDist <= 0.002) continue;
-
-                vec3 portalDir = toPortal / portalDist;
-                shadowPayload = 1.0;
-                traceRayEXT(tlas,
-                    gl_RayFlagsOpaqueEXT,
-                    0x01, 1, 2, 1,
-                    pointLightPos + portalDir * max(lightRadius, 0.001), 0.001, portalDir, portalDist - 0.002,
-                    1);
-
-                if (shadowPayload > 0.5) {
-                    visibleLightPortalList[visibleLightPortalCount] = portalIndex;
-                    visibleLightPortalCount++;
-                }
-            }
-        }
-
+        // ── Direct shadow ───────────────────────────────────────────
         vec3 toDirectLight = pointLightPos - worldPos;
         float directDist = length(toDirectLight);
         if (directDist > 0.002) {
@@ -268,6 +238,11 @@ void main() {
             ptSpecular += directSpec * pointLightColor * 0.3 * directAtten * directShadow;
         }
 
+        // ── Portal-warped lighting ──────────────────────────────────
+        // For each portal visible from the surface, compute the virtual
+        // light position through the portal warp and check reachability
+        // with just 2 shadow rays. This avoids the old O(lights×portals)
+        // per-light visibility scan.
         for (int i = 0; i < visiblePortalCount; ++i) {
             uint portalIdx = visiblePortalList[i];
             InstanceInfo portalInfo = inst[portalIdx];
@@ -284,17 +259,6 @@ void main() {
             vec3 portalFwd = pw.forward.xyz;
             vec3 portalX = pw.axisX.xyz;
             vec3 portalY = pw.axisY.xyz;
-
-            vec3 connectedPortalPos = mulPoint(portalWarp, portalPos);
-            bool matchedLightPortal = false;
-            for (int j = 0; j < visibleLightPortalCount; ++j) {
-                vec3 lightPortalPos = portalWarps[inst[visibleLightPortalList[j]].indices.w].center.xyz;
-                if (length(lightPortalPos - connectedPortalPos) <= PORTAL_MATCH_EPS) {
-                    matchedLightPortal = true;
-                    break;
-                }
-            }
-            if (!matchedLightPortal) continue;
 
             vec3 virtualLight = mulPoint(portalReverse, pointLightPos);
             float worldSide = dot(portalFwd, worldPos - portalPos);

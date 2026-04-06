@@ -28,6 +28,7 @@ set(SOURCES
     game/Physical.cpp
     game/Player.cpp
     game/Portal.cpp
+    objects/MazeGenerator.cpp
 )
 
 
