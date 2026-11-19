@@ -46,7 +46,7 @@ kbd { min-width: 22px; padding: 1px 5px; border-radius: 4px; border: 1px solid #
 .actions button:hover { border-color: var(--accent); }
 .viewport { width: 100%; aspect-ratio: 16/9; background: #202920; position: relative; overflow: hidden; }
 .viewport:fullscreen { height: 100%; }
-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+canvas { width: 100%; height: 100%; display: block; }
 .crosshair { pointer-events: none; position: absolute; inset: 50% auto auto 50%; width: 6px; height: 6px; background: #fff; transform: translate(-50%, -50%); border: 1px solid #3b453a; border-radius: 50%; }
 .overlay { display: grid; position: absolute; inset: 0; place-content: center; padding: 20px; text-align: center; background: #0b140e22; }
 .overlay p { padding: 10px 14px; border-radius: 7px; background: #121714e8; }
@@ -58,11 +58,58 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; }
 .readout i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 7px; }
 .readout b { color: #eef5e9; font-weight: 500; }
 .credits { color: var(--muted); margin: 16px 0 26px; font-size: .76rem; text-align: right; }
-.touch-controls { display: none; position: absolute; left: 10px; bottom: 10px; grid-template-columns: repeat(3, 36px); grid-auto-rows: 36px; gap: 3px; }
-.touch-active .touch-controls { display: grid; }
-.touch-controls button { border: 1px solid #879a87; background: #121714bb; border-radius: 7px; touch-action: none; }
-.touch-controls button:first-child { grid-column: 2; }
-.touch-controls button:nth-child(2) { grid-column: 1; }
+.touch-controls, .touch-hint { display: none; }
+.touch-active canvas, .joystick { touch-action: none; }
+.touch-active .touch-controls { display: contents; }
+.touch-controls button, .exit-fullscreen {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  border: 1px solid #879a87;
+  background: #121714e8;
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+}
+#pause { bottom: max(12px, env(safe-area-inset-bottom)); }
+.exit-fullscreen { top: max(12px, env(safe-area-inset-top)); }
+.joystick {
+  position: absolute;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: max(12px, env(safe-area-inset-left));
+  width: clamp(86px, 24vw, 110px);
+  aspect-ratio: 1;
+  border: 1px solid #e8f6e899;
+  background: #12171495;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  user-select: none;
+}
+.joystick span {
+  width: 38%;
+  aspect-ratio: 1;
+  border: 1px solid #e8f6e8;
+  background: #d4f7cba8;
+  border-radius: 50%;
+  transform: translate(var(--x, 0px), var(--y, 0px));
+  pointer-events: none;
+}
+.immersive-open { overflow: hidden; }
+.viewport.immersive {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  aspect-ratio: auto;
+}
+.touch-hint { margin: 0; padding: 8px 12px; color: var(--muted); font-size: .8rem; }
+@media (pointer: coarse) {
+  .desktop-instructions { display: none; }
+  .touch-hint { display: block; }
+  .actions button, #levels button { min-height: 44px; }
+}
 @media (max-width: 800px) {
   .workspace { grid-template-columns: 1fr; }
   .experiment { grid-row: 1; }
@@ -72,6 +119,6 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; }
 }
 @media (max-width: 460px) {
   .experiment-header { flex-direction: column; align-items: flex-start; }
-  .viewport { aspect-ratio: 4/3; }
+  .viewport { aspect-ratio: 1; }
   .readout { gap: 10px; }
 }

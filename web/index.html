@@ -15,13 +15,13 @@
         <span class="mark" aria-hidden="true"><i></i><i></i></span>
         <h1>Non-Euclidean <span>Engine</span></h1>
       </div>
-      <a class="source" href="https://github.com/TraitorJedi/NonEuclideanEngine" target="_blank" rel="noreferrer">Original source</a>
+      <a class="source" href="https://github.com/HackerPoet/NonEuclidean" target="_blank" rel="noreferrer">Original source</a>
     </header>
     <section class="workspace" aria-label="Portal demonstrations">
       <aside class="sidebar">
         <h2>Experiments</h2>
         <nav id="levels" aria-label="Select an experiment"></nav>
-        <div class="instructions">
+        <div class="instructions desktop-instructions">
           <h2>Controls</h2>
           <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Move</span></div>
           <div><kbd>Mouse</kbd><span>Look</span></div>
@@ -46,13 +46,13 @@
             <p id="message" role="status">Loading experiment…</p>
             <button type="button" id="enter" hidden>Enter experiment <span aria-hidden="true">→</span></button>
           </div>
-          <div class="touch-controls" id="touch-controls" aria-label="Touch movement">
-            <button type="button" data-key="KeyW" aria-label="Move forward">↑</button>
-            <button type="button" data-key="KeyA" aria-label="Move left">←</button>
-            <button type="button" data-key="KeyS" aria-label="Move backward">↓</button>
-            <button type="button" data-key="KeyD" aria-label="Move right">→</button>
+          <div class="touch-controls">
+            <div id="joystick" class="joystick" aria-hidden="true"><span></span></div>
+            <button id="pause" type="button">Pause</button>
           </div>
+          <button id="exit-fullscreen" class="exit-fullscreen" type="button" hidden>Exit fullscreen</button>
         </div>
+        <p class="touch-hint">Drag the joystick to move. Drag the scene to look.</p>
         <footer class="readout">
           <span><i aria-hidden="true"></i><b id="status">Loading</b></span>
           <span>Traversals <b id="crossings">0</b></span>
