@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#121714">
+  <meta name="description" content="Explore seven interactive demonstrations of non-Euclidean portal geometry.">
+  <link rel="icon" href="./favicon.png" type="image/png">
+  <title>Non-Euclidean Engine</title>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"><i></i><i></i></span>
+        <h1>Non-Euclidean <span>Engine</span></h1>
+      </div>
+      <a class="source" href="https://github.com/TraitorJedi/NonEuclideanEngine" target="_blank" rel="noreferrer">Original source</a>
+    </header>
+    <section class="workspace" aria-label="Portal demonstrations">
+      <aside class="sidebar">
+        <h2>Experiments</h2>
+        <nav id="levels" aria-label="Select an experiment"></nav>
+        <div class="instructions">
+          <h2>Controls</h2>
+          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Move</span></div>
+          <div><kbd>Mouse</kbd><span>Look</span></div>
+          <div><kbd>Esc</kbd><span>Release mouse</span></div>
+        </div>
+      </aside>
+      <article class="experiment">
+        <div class="experiment-header">
+          <div>
+            <h2 id="title"></h2>
+            <p id="description"></p>
+          </div>
+          <div class="actions">
+            <button id="reset" type="button">Reset</button>
+            <button id="fullscreen" type="button">Fullscreen</button>
+          </div>
+        </div>
+        <div id="viewport" class="viewport">
+          <canvas id="scene" aria-label="First-person view of the experiment" tabindex="0"></canvas>
+          <div class="crosshair" aria-hidden="true"></div>
+          <div id="overlay" class="overlay">
+            <p id="message" role="status">Loading experiment…</p>
+            <button type="button" id="enter" hidden>Enter experiment <span aria-hidden="true">→</span></button>
+          </div>
+          <div class="touch-controls" id="touch-controls" aria-label="Touch movement">
+            <button type="button" data-key="KeyW" aria-label="Move forward">↑</button>
+            <button type="button" data-key="KeyA" aria-label="Move left">←</button>
+            <button type="button" data-key="KeyS" aria-label="Move backward">↓</button>
+            <button type="button" data-key="KeyD" aria-label="Move right">→</button>
+          </div>
+        </div>
+        <footer class="readout">
+          <span><i aria-hidden="true"></i><b id="status">Loading</b></span>
+          <span>Traversals <b id="crossings">0</b></span>
+          <span>Scale <b id="scale">1.00×</b></span>
+        </footer>
+      </article>
+    </section>
+    <footer class="credits">Based on the original engine by CodeParade.</footer>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
