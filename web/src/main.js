@@ -3,6 +3,8 @@ import { createAssets, makeCollider, makeSurface } from './assets.js';
 import { buildLevel, levels } from './levels.js';
 import { Player } from './player.js';
 import { PortalRenderer } from './renderer.js';
+import { mountBuilder } from './builder.js';
+import { mountEditor } from './editor.js';
 import './style.css';
 
 const ui = Object.fromEntries([
@@ -49,8 +51,7 @@ function updateReadout() {
   ui.scale.textContent = `${player.scale.toFixed(2)}×`;
 }
 
-async function loadLevel(index) {
-  const level = buildLevel(index);
+async function loadLevel(index, level = buildLevel(index)) {
   level.scene = new Scene();
   level.colliders = [];
   const loaded = await Promise.all(level.objects.map(async ({ model, texture: name, matrix }) => {
@@ -65,10 +66,11 @@ async function loadLevel(index) {
     level.scene.add(mesh);
     level.colliders.push(...asset.collision.map(points => makeCollider(points, matrix)));
   }
+  level.lowestElevation = level.colliders.reduce((lowest, collider) => Math.min(lowest, collider.bounds.min.y), level.spawn[1]);
   return level;
 }
 
-async function select(index) {
+async function select(index, custom) {
   const version = ++loadVersion;
   selected = index;
   active = undefined;
@@ -77,12 +79,12 @@ async function select(index) {
     if (i === index) button.setAttribute('aria-current', 'true');
     else button.removeAttribute('aria-current');
   }
-  [ui.title.textContent, ui.description.textContent] = levels[index];
+  [ui.title.textContent, ui.description.textContent] = custom ? ['Custom level', 'Playtesting your editor layout.'] : levels[index];
   ui.status.textContent = 'Loading';
   showStatus('Loading experiment…');
   try {
     if (!cachedLevels.has(index)) {
-      const pending = loadLevel(index);
+      const pending = loadLevel(index, custom);
       cachedLevels.set(index, pending);
       pending.catch(() => cachedLevels.delete(index));
     }
@@ -171,6 +173,7 @@ function reset() {
 }
 
 function onKey(event) {
+  if (document.querySelector('dialog[open]')) return;
   if (event.altKey && event.code === 'Enter') {
     if (!event.repeat && !ui.fullscreen.disabled) fullscreen();
     event.preventDefault();
@@ -312,6 +315,14 @@ function animate(timestamp) {
 try {
   renderer = new PortalRenderer(ui.scene);
   wireControls();
+  const playLayout = layout => {
+    pause();
+    cachedLevels.get(-1)?.then(old => old.scene.children.forEach(mesh => mesh.material.dispose()), () => {});
+    cachedLevels.delete(-1);
+    select(-1, layout);
+  };
+  mountEditor(playLayout);
+  mountBuilder(assets, playLayout, pause);
   new ResizeObserver(([entry]) => {
     const { width, height } = entry.contentRect;
     if (width < 1 || height < 1) return;
