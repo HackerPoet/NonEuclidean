@@ -167,15 +167,28 @@ export function mountBuilder(assets, play, pause) {
   const codeField = codeDialog.querySelector('textarea');
   const codeNote = codeDialog.querySelector('[role=status]');
   const submitCode = codeDialog.querySelector('[data-submit]');
-  function openCode(exporting) {
+  let codeSession = 0;
+  async function openCode(exporting) {
     codeField.readOnly = exporting;
-    try { codeField.value = exporting ? exportLevel(pieces) : ''; }
-    catch (error) { status.textContent = error.message; return; }
+    const session = ++codeSession;
+    codeField.value = '';
+    submitCode.disabled = exporting;
     codeDialog.querySelector('h2').textContent = exporting ? 'Export grid level' : 'Import grid level';
     submitCode.textContent = exporting ? 'Copy code' : 'Replace draft';
     codeNote.textContent = exporting ? 'Share this code to let someone edit or play your level.'
       : 'Paste a code to replace your current draft. Undo restores it.';
     codeDialog.showModal();
+    if (exporting) {
+      try {
+        const value = await exportLevel(pieces);
+        if (!codeDialog.open || session !== codeSession) return;
+        codeField.value = value;
+        submitCode.disabled = false;
+      } catch (error) {
+        if (session === codeSession) codeNote.textContent = error.message;
+        return;
+      }
+    }
     codeField.focus();
     codeField.select();
   }
@@ -187,8 +200,16 @@ export function mountBuilder(assets, play, pause) {
       return;
     }
     let imported;
-    try { imported = importLevel(codeField.value); await loading; }
-    catch (error) { codeNote.textContent = error.message; return; }
+    const session = codeSession;
+    submitCode.disabled = true;
+    try { imported = await importLevel(codeField.value); await loading; }
+    catch (error) {
+      if (session === codeSession) codeNote.textContent = error.message;
+      return;
+    } finally {
+      if (session === codeSession) submitCode.disabled = false;
+    }
+    if (!codeDialog.open || session !== codeSession) return;
     history.push(pieces);
     pieces = imported;
     ghost.visible = false;
