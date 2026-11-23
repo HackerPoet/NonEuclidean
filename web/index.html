@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#121714">
+  <meta name="description" content="Explore seven interactive demonstrations of non-Euclidean portal geometry.">
+  <link rel="icon" href="./favicon.png" type="image/png">
+  <title>Non-Euclidean Engine</title>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"><i></i><i></i></span>
+        <h1>Non-Euclidean <span>Engine</span></h1>
+      </div>
+      <a class="source" href="https://github.com/HackerPoet/NonEuclidean" target="_blank" rel="noreferrer">Original source</a>
+    </header>
+    <section class="workspace" aria-label="Portal demonstrations">
+      <aside class="sidebar">
+        <h2>Experiments</h2>
+        <nav id="levels" aria-label="Select an experiment"></nav>
+        <button id="edit" type="button" aria-haspopup="dialog" aria-controls="builder">Level editor</button>
+        <div class="instructions desktop-instructions">
+          <h2>Controls</h2>
+          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Move</span></div>
+          <div><kbd>Mouse</kbd><span>Look</span></div>
+          <div><kbd>Esc</kbd><span>Release mouse</span></div>
+        </div>
+      </aside>
+      <article class="experiment">
+        <div class="experiment-header">
+          <div>
+            <h2 id="title"></h2>
+            <p id="description"></p>
+          </div>
+          <div class="actions">
+            <button id="reset" type="button">Reset</button>
+            <button id="fullscreen" type="button">Fullscreen</button>
+          </div>
+        </div>
+        <div id="viewport" class="viewport">
+          <canvas id="scene" aria-label="First-person view of the experiment" tabindex="0"></canvas>
+          <div class="crosshair" aria-hidden="true"></div>
+          <div id="overlay" class="overlay">
+            <p id="message" role="status">Loading experiment…</p>
+            <button type="button" id="enter" hidden>Enter experiment <span aria-hidden="true">→</span></button>
+          </div>
+          <div class="touch-controls">
+            <div id="joystick" class="joystick" aria-hidden="true"><span></span></div>
+            <button id="pause" type="button">Pause</button>
+          </div>
+          <button id="exit-fullscreen" class="exit-fullscreen" type="button" hidden>Exit fullscreen</button>
+        </div>
+        <p class="touch-hint">Drag the joystick to move. Drag the scene to look.</p>
+        <footer class="readout">
+          <span><i aria-hidden="true"></i><b id="status">Loading</b></span>
+          <span>Traversals <b id="crossings">0</b></span>
+          <span>Scale <b id="scale">1.00×</b></span>
+        </footer>
+      </article>
+    </section>
+    <footer class="credits">Based on the original engine by CodeParade.</footer>
+  </main>
+  <dialog id="builder" aria-label="Level builder">
+    <header><h2>Level builder</h2><span class="spawn-key"><b aria-hidden="true">&#9678; &#8593;</b> Player spawn / reset</span><button data-action="close">Close</button></header>
+    <nav aria-label="Building tools">
+      <button data-tool="floor" aria-pressed="true">Floor tile</button>
+      <button data-tool="wall" aria-pressed="false">Wall</button>
+      <button data-tool="door" aria-pressed="false">Door</button>
+      <label id="tile-height">Base height <input type="number" value="0" min="0" max="100" step="any" required></label>
+      <label id="tile-rise">Tile rise <input type="number" value="0" min="0" max="1.5" step="any" required></label>
+      <label id="door-scale" hidden>Door size <input type="number" value="1" min="0.1" max="1" step="any" required></label>
+      <button data-action="rotate">Rotate 90°</button>
+      <button data-tool="erase" aria-pressed="false">Erase</button>
+      <button data-tool="orbit" aria-pressed="false">Camera</button>
+      <button data-action="undo" disabled>Undo</button>
+    </nav>
+    <canvas aria-label="3D level construction grid"></canvas>
+    <footer><output>Tap the grid to place a floor tile.</output><button data-action="export">Export code</button><button data-action="import">Import code</button><button data-action="play">Playtest</button></footer>
+  </dialog>
+  <dialog id="level-code" aria-labelledby="code-title">
+    <h2 id="code-title"></h2>
+    <label>Level code<textarea rows="6" spellcheck="false" autocapitalize="off"></textarea></label>
+    <p role="status"></p>
+    <footer><button type="button" data-close>Close</button><button type="button" data-submit></button></footer>
+  </dialog>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
