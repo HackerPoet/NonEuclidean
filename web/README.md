@@ -4,7 +4,7 @@ A WebGL 2 browser port of [CodeParade’s NonEuclideanEngine](https://github.com
 
 ## Run locally
 
-Use Node.js 24.15 or newer on the 24.x line and npm 12.2.3.
+Use Node.js 26.x and npm 12.2.3.
 
 ```sh
 npx --yes --package=npm@12.2.3 npm ci

@@ -4,7 +4,9 @@ A non-Euclidean rendering engine for Windows, written in C++ and OpenGL. This fo
 
 ## Play in a browser
 
-Use Node.js 24.15 or newer on the 24.x line. From the repository root:
+[Play the live demo on Vercel](https://none-engine.vercel.app/)
+
+Use Node.js 26.x. From the repository root:
 
 ```sh
 cd web
