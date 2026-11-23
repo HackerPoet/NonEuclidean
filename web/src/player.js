@@ -40,6 +40,12 @@ export class Player {
         center.copy(this.position);
         center.y += height;
         if (collider.bounds.distanceToPoint(center) >= radius) continue;
+        if (collider.openings?.some(door => {
+          if (delta.subVectors(before, door.position).dot(door.normal) < -1e-9) return false;
+          closest.copy(this.position).applyMatrix4(door.inverse);
+          const halfWidth = delta.setFromMatrixColumn(door.matrix, 0).length();
+          return Math.abs(closest.x) + radius / halfWidth <= 1 && Math.abs(closest.y) < 1;
+        })) continue;
         const { u, v, uLengthSq, vLengthSq } = collider;
         delta.subVectors(center, collider.center);
         const alongU = Math.max(-1, Math.min(1, delta.dot(u) / uLengthSq));
@@ -63,25 +69,23 @@ export class Player {
     let nearest = 1;
     let crossing;
     for (const portal of level.portals) {
-      const clearance = portal.mounted ? radius : 0;
-      const distanceA = delta.subVectors(before, portal.position).dot(portal.normal) - clearance;
-      const distanceB = delta.subVectors(this.position, portal.position).dot(portal.normal) - clearance;
+      const distanceA = delta.subVectors(before, portal.position).dot(portal.normal);
+      const distanceB = delta.subVectors(this.position, portal.position).dot(portal.normal);
       if (distanceA * distanceB > 0 || Math.abs(distanceA - distanceB) < 1e-9) continue;
       const time = distanceA / (distanceA - distanceB);
       if (time >= nearest) continue;
       const hit = closest.copy(before).lerp(this.position, time).applyMatrix4(portal.inverse);
       if (Math.abs(hit.x) >= 1 || Math.abs(hit.y) >= 1) continue;
       if (portal.mounted && Math.abs(hit.x) + radius / center.setFromMatrixColumn(portal.matrix, 0).length() > 1) continue;
-      if (!portal.sides[distanceA > 0 ? 'front' : 'back']) continue;
+      const warp = portal.sides[distanceA > distanceB ? 'front' : 'back'];
+      if (!warp) continue;
       nearest = time;
-      crossing = { warp: portal.sides[distanceA > 0 ? 'front' : 'back'], portal, distanceA };
+      crossing = warp;
     }
     if (crossing) {
-      const { warp, portal, distanceA } = crossing;
+      const warp = crossing;
       const e = warp.matrix.elements;
-      this.position.addScaledVector(portal.normal, distanceA > 0 ? -0.004 : 0.004)
-        .applyMatrix4(warp.matrix);
-      if (warp.exit.mounted) this.position.addScaledVector(warp.exit.normal, 2 * radius * Math.hypot(e[0], e[2]));
+      this.position.applyMatrix4(warp.matrix);
       this.rotation.y += Math.atan2(e[8], e[10]);
       const origin = closest.set(0, 0, 0).applyMatrix4(warp.matrix);
       this.velocity.applyMatrix4(warp.matrix).sub(origin);

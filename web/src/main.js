@@ -53,17 +53,17 @@ function updateReadout() {
 async function loadLevel(index, level = buildLevel(index)) {
   level.scene = new Scene();
   level.colliders = [];
-  const loaded = await Promise.all(level.objects.map(async ({ model, texture: name, matrix }) => {
+  const loaded = await Promise.all(level.objects.map(async ({ model, texture: name, matrix, openings }) => {
     const [asset, texture] = await Promise.all([assets.mesh(model), assets.texture(name)]);
-    return { asset, texture, name, matrix };
+    return { asset, texture, name, matrix, openings };
   }));
-  for (const { asset, texture, name, matrix } of loaded) {
+  for (const { asset, texture, name, matrix, openings } of loaded) {
     const mesh = new Mesh(asset.geometry, makeSurface(texture, name === 'floorplan_textures', matrix));
     mesh.matrixAutoUpdate = false;
     mesh.matrix.copy(matrix);
     mesh.matrixWorldNeedsUpdate = true;
     level.scene.add(mesh);
-    level.colliders.push(...asset.collision.map(points => makeCollider(points, matrix)));
+    level.colliders.push(...asset.collision.map(points => ({ ...makeCollider(points, matrix), openings })));
   }
   level.lowestElevation = level.colliders.reduce((lowest, collider) => Math.min(lowest, collider.bounds.min.y), level.spawn[1]);
   return level;

@@ -29,6 +29,8 @@ h1 span { color: var(--muted); font-weight: 470; }
 .sidebar { padding: 21px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
 .sidebar h2 { margin: 0 8px 12px; color: var(--muted); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
 #levels { display: grid; gap: 4px; }
+#edit { width: 100%; margin-top: 12px; min-height: 44px; padding: 8px; text-align: left; font-size: .85rem; color: var(--accent); background: transparent; border: 1px solid var(--line); border-radius: 7px; }
+#edit:hover { background: #242e24; border-color: var(--accent); }
 #levels button { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 8px; border: 1px solid transparent; background: transparent; border-radius: 7px; font-size: .85rem; }
 #levels button:hover { background: #242e24; }
 #levels button[aria-current] { background: #263323; border-color: #40543a; color: var(--accent); }

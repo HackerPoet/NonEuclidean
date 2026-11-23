@@ -57,7 +57,15 @@ export function buildDraft(pieces) {
       entry.sides = entry.mounted ? { front: warp } : { front: warp, back: warp };
       portals.push(entry);
     }
+    if (portal.mounted !== mate.mounted) {
+      const [entry, exit] = portal.mounted ? [mate, portal] : [portal, mate];
+      entry.sides.back = { exit, matrix: exit.matrix.clone().multiply(entry.inverse), exitSign: -1 };
+    }
     pairs.delete(piece.pair);
+  }
+  for (const object of objects) {
+    if (object.model !== 'build_wall') continue;
+    object.openings = portals.filter(door => door.mounted && sameCell(pieces[object.pieceIndex], pieces[door.pieceIndex]));
   }
   // A single endpoint is a solid door until its partner exists.
   for (const door of pairs.values()) {
