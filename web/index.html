@@ -64,7 +64,7 @@
     <footer class="credits">Based on the original engine by CodeParade.</footer>
   </main>
   <dialog id="builder" aria-label="Level builder">
-    <header><h2>Level builder</h2><button data-action="close">Close</button></header>
+    <header><h2>Level builder</h2><span class="spawn-key"><b aria-hidden="true">&#9678; &#8593;</b> Player spawn / reset</span><button data-action="close">Close</button></header>
     <nav aria-label="Building tools">
       <button data-tool="floor" aria-pressed="true">Floor tile</button>
       <button data-tool="wall" aria-pressed="false">Wall</button>
@@ -78,18 +78,13 @@
       <button data-action="undo" disabled>Undo</button>
     </nav>
     <canvas aria-label="3D level construction grid"></canvas>
-    <footer><output>Tap the grid to place a floor tile.</output><button id="advanced-editor">Demo templates</button><button data-action="play">Playtest</button></footer>
+    <footer><output>Tap the grid to place a floor tile.</output><button data-action="export">Export code</button><button data-action="import">Import code</button><button data-action="play">Playtest</button></footer>
   </dialog>
-  <dialog id="editor" aria-labelledby="editor-title">
-    <h2 id="editor-title">Level editor</h2>
-    <label>Doorway template<select id="template"></select></label><button id="add">Add section</button>
-    <label>Section<select id="parts"></select></label><button id="remove">Remove section</button>
-    <label>Edit transform<select id="doors"></select></label>
-    <div id="pose"></div>
-    <label>Front leads to back of<select id="destination"></select></label>
-    <p>Changing a destination swaps the two incoming links. The first section sets the starting position.</p>
-    <small id="editor-status" role="status"></small>
-    <footer><button id="close">Close</button><button id="play-layout">Playtest level</button></footer>
+  <dialog id="level-code" aria-labelledby="code-title">
+    <h2 id="code-title"></h2>
+    <label>Level code<textarea rows="6" spellcheck="false" autocapitalize="off"></textarea></label>
+    <p role="status"></p>
+    <footer><button type="button" data-close>Close</button><button type="button" data-submit></button></footer>
   </dialog>
   <script type="module" src="/src/main.js"></script>
 </body>

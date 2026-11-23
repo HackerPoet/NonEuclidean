@@ -4,7 +4,6 @@ import { buildLevel, levels } from './levels.js';
 import { Player } from './player.js';
 import { PortalRenderer } from './renderer.js';
 import { mountBuilder } from './builder.js';
-import { mountEditor } from './editor.js';
 import './style.css';
 
 const ui = Object.fromEntries([
@@ -321,7 +320,6 @@ try {
     cachedLevels.delete(-1);
     select(-1, layout);
   };
-  mountEditor(playLayout);
   mountBuilder(assets, playLayout, pause);
   new ResizeObserver(([entry]) => {
     const { width, height } = entry.contentRect;

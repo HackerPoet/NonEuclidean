@@ -122,14 +122,6 @@ canvas { width: 100%; height: 100%; display: block; }
   .viewport { aspect-ratio: 1; }
   .readout { gap: 10px; }
 }
-#editor { width: min(500px, 95vw); max-height: 90dvh; overflow: auto; padding: 24px; background: var(--surface); color: inherit; border: 1px solid var(--line); border-radius: 14px; }
-#editor::backdrop { background: #070a08cc; }
-#editor h2 { margin: 0 0 16px; }
-#editor label { display: grid; gap: 4px; margin: 10px 0; color: var(--muted); }
-#editor select, #editor input, #editor button { min-height: 42px; min-width: 0; padding: 6px 10px; border: 1px solid #435044; background: #202720; color: inherit; border-radius: 6px; }
-#pose { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 10px; }
-#editor footer { display: flex; justify-content: flex-end; gap: 8px; }
-#editor #play-layout { background: var(--accent); color: #151e11; }
 #builder { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; padding: 0; background: var(--surface); color: inherit; }
 #builder[open] { display: grid; grid-template-rows: auto auto minmax(0,1fr) auto; }
 #builder header, #builder nav, #builder footer { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; padding: 7px 12px; }
@@ -141,3 +133,11 @@ canvas { width: 100%; height: 100%; display: block; }
 #builder output { margin-right: auto; font-size: .83rem; color: var(--muted); }
 
 #builder nav input { width: 4.5em; }
+#level-code { width: min(32rem, 92vw); padding: 1.25rem; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+#level-code::backdrop { background: #080c09bb; }
+#level-code h2 { margin-top: 0; }
+#level-code textarea { display: block; box-sizing: border-box; width: 100%; margin-top: .4rem; resize: vertical; }
+#level-code footer { display: flex; justify-content: flex-end; gap: .5rem; }
+#level-code button { padding: .6rem 1rem; border: 1px solid var(--line); border-radius: 6px; background: #263027; }
+.spawn-key { margin-right: auto; font-size: .85rem; }
+.spawn-key b { color: #65eaff; margin-inline: .5rem .2rem; }

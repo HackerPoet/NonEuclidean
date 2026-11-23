@@ -1,8 +1,10 @@
-import { AmbientLight, BoxGeometry, Color, DirectionalLight, GridHelper, Group, Matrix4, Mesh,
+import { exportLevel, importLevel } from './level-code.js';
+import { AmbientLight, ArrowHelper, RingGeometry, BoxGeometry, Color, DirectionalLight, GridHelper, Group, Matrix4, Mesh,
   MeshLambertMaterial, MeshBasicMaterial, OrthographicCamera, Plane, Raycaster, Scene,
   Vector2, Vector3, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+const gridSpawn = [0, 1.5, 2];
 const key = 'nonEuclidean.builder.v1';
 const models = { floor: 'build_floor', wall: 'build_wall', door: 'tunnel' };
 const textures = { floor: 'checker_green', wall: 'checker_gray', door: 'gold' };
@@ -65,7 +67,7 @@ export function buildDraft(pieces) {
       matrix: new Matrix4().makeRotationY(piece.turn * Math.PI / 2)
         .scale(new Vector3(0.75, 1, 1)).setPosition(facePosition(piece)) });
   }
-  return { objects, portals, spawn: [0, 1.5, 2] };
+  return { objects, portals, spawn: [...gridSpawn] };
 }
 
 export function mountBuilder(assets, play, pause) {
@@ -86,6 +88,21 @@ export function mountBuilder(assets, play, pause) {
   const placed = new Group();
   const grid = new GridHelper(200, 100, 0x6e8767, 0x445347);
   grid.position.set(1, 0.02, 1);
+  // Keep the spawn overlay outside the editable meshes used for picking and export.
+  const spawnMarker = new Group();
+  spawnMarker.position.set(gridSpawn[0], 0.04, gridSpawn[2]);
+  const markerColor = 0x65eaff;
+  const ring = new Mesh(new RingGeometry(0.38, 0.51, 40),
+    new MeshBasicMaterial({ color: markerColor, depthTest: false, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2;
+  const forward = new ArrowHelper(new Vector3(0, 0, -1), new Vector3(), 1.15, markerColor, 0.45, 0.4);
+  for (const part of [ring, forward.line, forward.cone]) {
+    part.renderOrder = 10;
+    part.material.depthTest = false;
+    part.material.depthWrite = false;
+  }
+  spawnMarker.add(ring, forward);
+  scene.add(spawnMarker);
   scene.add(placed, grid, new AmbientLight(0xffffff, 1.7));
   const sun = new DirectionalLight(0xffffff, 2);
   sun.position.set(4, 10, 5);
@@ -146,6 +163,39 @@ export function mountBuilder(assets, play, pause) {
     dialog.querySelector('[data-action=undo]').disabled = !history.length;
     populate();
   }
+  const codeDialog = document.querySelector('#level-code');
+  const codeField = codeDialog.querySelector('textarea');
+  const codeNote = codeDialog.querySelector('[role=status]');
+  const submitCode = codeDialog.querySelector('[data-submit]');
+  function openCode(exporting) {
+    codeField.readOnly = exporting;
+    try { codeField.value = exporting ? exportLevel(pieces) : ''; }
+    catch (error) { status.textContent = error.message; return; }
+    codeDialog.querySelector('h2').textContent = exporting ? 'Export grid level' : 'Import grid level';
+    submitCode.textContent = exporting ? 'Copy code' : 'Replace draft';
+    codeNote.textContent = exporting ? 'Share this code to let someone edit or play your level.'
+      : 'Paste a code to replace your current draft. Undo restores it.';
+    codeDialog.showModal();
+    codeField.focus();
+    codeField.select();
+  }
+  codeDialog.querySelector('[data-close]').onclick = () => codeDialog.close();
+  submitCode.onclick = async () => {
+    if (codeField.readOnly) {
+      try { await navigator.clipboard.writeText(codeField.value); codeNote.textContent = 'Code copied.'; }
+      catch { codeField.focus(); codeField.select(); codeNote.textContent = 'Use your manual Copy command.'; }
+      return;
+    }
+    let imported;
+    try { imported = importLevel(codeField.value); await loading; }
+    catch (error) { codeNote.textContent = error.message; return; }
+    history.push(pieces);
+    pieces = imported;
+    ghost.visible = false;
+    status.textContent = 'Imported ' + pieces.length + ' pieces.';
+    save();
+    codeDialog.close();
+  };
   function point(event) {
     const rect = canvas.getBoundingClientRect();
     const pointer = new Vector2(2 * (event.clientX - rect.left) / rect.width - 1,
@@ -250,6 +300,8 @@ export function mountBuilder(assets, play, pause) {
       status.textContent = tool === 'door' ? 'Set endpoint size (0.1-1), then click a wall face or an existing door.' : tool === 'orbit' ? 'Drag to orbit. Pinch or scroll to zoom. Right-drag or use two fingers to pan.' : tool === 'floor' ? 'Set base height and rise, rotate the uphill direction, then click a tile.' : 'Tap the grid to ' + (tool === 'erase' ? 'erase a piece' : 'place a ' + tool);
     }
     switch (button.dataset.action) {
+      case 'export': openCode(true); break;
+      case 'import': openCode(false); break;
       case 'rotate': turn = (turn + 1) % 4; status.textContent = 'Placement rotation ' + turn * 90 + '°'; ghost.visible = false; redraw(); break;
       case 'undo': if (history.length) { pieces = history.pop(); save(); } break;
       case 'close': dialog.close(); break;
